@@ -1,0 +1,11 @@
+MANIFEST.in
+NEWS.txt
+README.rst
+setup.py
+src/fox/__init__.py
+src/fox.egg-info/PKG-INFO
+src/fox.egg-info/SOURCES.txt
+src/fox.egg-info/dependency_links.txt
+src/fox.egg-info/entry_points.txt
+src/fox.egg-info/not-zip-safe
+src/fox.egg-info/top_level.txt
