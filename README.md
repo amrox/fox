@@ -9,9 +9,9 @@ fox is a set of tools and utilities for building iOS and Mac projects. fox is no
 
 ### ipa
 
-	Create a signed IPA file.
-
-	```fox ipa [-h] --target TARGET --identity IDENTITY --profile PROFILE
+ * Create a signed IPA file.
+ 
+ ```fox ipa [-h] --target TARGET --identity IDENTITY --profile PROFILE
 			[--config CONFIG]```
 
 
