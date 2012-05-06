@@ -145,10 +145,9 @@ def main():
     parser_ipa = subparsers.add_parser('ipa', help='ipa help')
     parser_ipa.add_argument('--project', action='store', required=False)
     parser_ipa.add_argument('--target', action='store', required=True)
+    parser_ipa.add_argument('--config', action='store', default='Debug', required=False)
     parser_ipa.add_argument('--identity', action='store', required=True)
     parser_ipa.add_argument('--profile', action='store', required=True)
-    #parser_ipa.add_argument('--project', action='store', required=False)
-    parser_ipa.add_argument('--config', action='store', default='Debug', required=False)
     parser_ipa.set_defaults(func=ipa)
 
     # resign
