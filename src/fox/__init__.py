@@ -62,14 +62,16 @@ def ipa(args):
         # TODO: better error handling
         print "couldn't find profile"
         sys.exit(1)
-    
-    build_output = check_output(
-            ['xcodebuild', 
-                '-sdk', 'iphoneos', 
-                '-target', args.target, 
-                '-config', args.config, 
-                'build', 
-                'CODE_SIGN_IDENTITY=%s' % (args.identity)])
+   
+    build_args = ['xcodebuild', '-sdk', 'iphoneos']
+    if args.project is not None:
+        build_args.extend(['-project', args.project])
+    build_args.extend([
+        '-target', args.target, 
+        '-config', args.config, 
+        'build', 
+        'CODE_SIGN_IDENTITY=%s' % (args.identity)])
+    build_output = check_output(build_args)
     puts(build_output)
 
     built_products_dir = _parse_setenv_var('BUILT_PRODUCTS_DIR', build_output)
@@ -116,16 +118,18 @@ def resign(args):
                 '--entitlements',
                 os.path.join(app_path, 'Entitlements.plist'),
                 app_path])
-    print codesign_output
+    puts(codesign_output)
 
     pwd = os.getcwd()
     if not os.path.isabs(args.output):
-        output = os.path.join(pwd, args.output)
+        output_path = os.path.join(pwd, args.output)
     else:
-        output = args.output
-          
+        output_path = args.output
+
+    # Change working dir so 'Payload' is at the root of the archive.
+    # Might be a way to do this with args to zip but I couldn't find it.
     os.chdir(tmp_dir)
-    call(['zip', '-qr', output, 'Payload'])
+    call(['zip', '-qr', output_path, 'Payload'])
     os.chdir(pwd)
 
     shutil.rmtree(tmp_dir)
@@ -139,6 +143,7 @@ def main():
 
     # ipa
     parser_ipa = subparsers.add_parser('ipa', help='ipa help')
+    parser_ipa.add_argument('--project', action='store', required=False)
     parser_ipa.add_argument('--target', action='store', required=True)
     parser_ipa.add_argument('--identity', action='store', required=True)
     parser_ipa.add_argument('--profile', action='store', required=True)

@@ -19,6 +19,7 @@ fox is a set of tools and utilities for building iOS and Mac projects. fox is no
     * `--identity` Name of the code-signing identity, i.e. 'iPhone Distribution: My Company'.
     * `--profile` Provisioning profile. If a valid path is supplied, that profile is used. Also, a name can be provided, (i.e. 'MyApp Ad Hoc') and fox with search for that provisioning profile in default locations (current just `~/Library/MobileDevice/Provisioning Profiles`).
     * `--config` The build configuration. Defaults to `Debug`.
+    * `--project` Path to Xcode profile file.
 
 
 ### resign
