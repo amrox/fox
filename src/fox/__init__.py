@@ -1,8 +1,11 @@
 import argparse
 from clint.textui import puts, indent
-from subprocess import call, check_output
+from subprocess import call, check_output, Popen
 import os, re, sys
 import plistlib
+from tempfile import mkdtemp
+from fnmatch import fnmatch
+import shutil
 
 #### stolen from provtool https://github.com/mindsnacks/provtool
 
@@ -52,6 +55,8 @@ def _find_prov_profile(input):
     return path
 
 def ipa(args):
+    """http://stackoverflow.com/questions/6896029/re-sign-ipa-iphone"""
+
     prov_profile_path = _find_prov_profile(args.profile)
     if prov_profile_path is None:
         # TODO: better error handling
@@ -80,7 +85,51 @@ def ipa(args):
             )
     puts(package_output)
 
+def resign(args):
+    ipa_path = args.ipa
+    if not os.path.exists(ipa_path):
+        # TODO: better error
+        print "couldn't find ipa"
+        sys.exit(1)
 
+    tmp_dir = mkdtemp()
+    call(['unzip', ipa_path, '-d', tmp_dir])
+
+    payload_path = os.path.join(tmp_dir, 'Payload')
+    for file in os.listdir(payload_path):
+        if fnmatch(file, '*.app'):
+            app_path = os.path.join(payload_path, file)
+
+    shutil.rmtree(os.path.join(app_path, '_CodeSignature'))
+
+    embedded_prov_profile_path = os.path.join(app_path, 'embedded.mobileprovision')
+    os.remove(embedded_prov_profile_path)
+
+    src_prov_profile_path = _find_prov_profile(args.profile)
+    shutil.copyfile(src_prov_profile_path, embedded_prov_profile_path)
+
+    codesign_output = check_output(
+            ['codesign', '-f', 
+                '-s', args.identity,
+                '--resource-rules',
+                os.path.join(app_path, 'ResourceRules.plist'),
+                '--entitlements',
+                os.path.join(app_path, 'Entitlements.plist'),
+                app_path])
+    print codesign_output
+
+    pwd = os.getcwd()
+    if not os.path.isabs(args.output):
+        output = os.path.join(pwd, args.output)
+    else:
+        output = args.output
+          
+    os.chdir(tmp_dir)
+    call(['zip', '-qr', output, 'Payload'])
+    os.chdir(pwd)
+
+    shutil.rmtree(tmp_dir)
+    
 def main():
     parser = argparse.ArgumentParser(description='')
 
@@ -98,7 +147,12 @@ def main():
     parser_ipa.set_defaults(func=ipa)
 
     # resign
-    #parser_resign = subparsers.add_parser('resign', help='resign help')
+    parser_resign = subparsers.add_parser('resign', help='resign help')
+    parser_resign.add_argument('--ipa', action='store', required=True)
+    parser_resign.add_argument('--identity', action='store', required=True)
+    parser_resign.add_argument('--profile', action='store', required=True)
+    parser_resign.add_argument('--output', action='store', required=True)
+    parser_resign.set_defaults(func=resign)
 
     args = parser.parse_args()
     args.func(args)

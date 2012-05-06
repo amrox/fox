@@ -15,6 +15,13 @@ fox is a set of tools and utilities for building iOS and Mac projects. fox is no
 			[--config CONFIG]```
 
 
+### resign
+
+ * Resign an existing IPA file.
+ 
+ ```fox resign [-h] --ipa IPA --identity IDENTITY --profile PROFILE
+                   --output OUTPUT```
+
 # License
 
 BSD
