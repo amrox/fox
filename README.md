@@ -12,7 +12,7 @@ fox is a set of tools and utilities for building iOS and Mac projects. fox is no
   * Create a signed IPA file.
  
   ```fox ipa [-h] [--project PROJECT] --target TARGET [--config CONFIG]
-                 --identity IDENTITY --profile PROFILE```
+                 --identity IDENTITY --profile PROFILE [--keychain KEYCHAIN]```
 
 	* `-h` Print help.
 	* `--project` Path to Xcode profile file.
@@ -20,7 +20,7 @@ fox is a set of tools and utilities for building iOS and Mac projects. fox is no
     * `--target` Refers to the name of the target in the Xcode project.
     * `--identity` Name of the code-signing identity, i.e. 'iPhone Distribution: My Company'.
     * `--profile` Provisioning profile. If a valid path is supplied, that profile is used. Also, a name can be provided, (i.e. 'MyApp Ad Hoc') and fox with search for that provisioning profile in default locations (current just `~/Library/MobileDevice/Provisioning Profiles`).
-
+    * `--keychain` Use a keychain file instead of the default keychain.
 
 ### resign
 

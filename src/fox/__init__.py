@@ -1,6 +1,6 @@
 import argparse
 from clint.textui import puts, indent
-from subprocess import call, check_output, Popen
+from subprocess import call, check_output, Popen, STDOUT, PIPE
 import os, re, sys
 import plistlib
 from tempfile import mkdtemp
@@ -69,10 +69,19 @@ def ipa(args):
     build_args.extend([
         '-target', args.target, 
         '-config', args.config, 
-        'build', 
+        #'build', 
         'CODE_SIGN_IDENTITY=%s' % (args.identity)])
-    build_output = check_output(build_args)
-    puts(build_output)
+    if args.keychain is not None:
+        build_args.extend(['OTHER_CODE_SIGN_FLAGS=--keychain=%s' %
+            os.path.abspath(args.keychain)])
+       
+    p = Popen(build_args, stderr=STDOUT, stdout=PIPE)
+    build_output = ''
+    while True:
+        line = p.stdout.readline()
+        if not line: break
+        build_output += line
+        puts(line, newline=False)
 
     built_products_dir = _parse_setenv_var('BUILT_PRODUCTS_DIR', build_output)
     full_product_name = _parse_setenv_var('FULL_PRODUCT_NAME', build_output)
@@ -151,6 +160,7 @@ def main():
     parser_ipa.add_argument('--config', action='store', default='Debug', required=False)
     parser_ipa.add_argument('--identity', action='store', required=True)
     parser_ipa.add_argument('--profile', action='store', required=True)
+    parser_ipa.add_argument('--keychain', action='store', required=False)
     parser_ipa.set_defaults(func=ipa)
 
     # resign
