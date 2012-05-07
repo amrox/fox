@@ -110,24 +110,27 @@ def resign(args):
     src_prov_profile_path = _find_prov_profile(args.profile)
     shutil.copyfile(src_prov_profile_path, embedded_prov_profile_path)
 
-    codesign_output = check_output(
-            ['codesign', '-f', 
+    codesign_args = ['codesign', '-f', 
                 '-s', args.identity,
                 '--resource-rules',
                 os.path.join(app_path, 'ResourceRules.plist'),
                 '--entitlements',
-                os.path.join(app_path, 'Entitlements.plist'),
-                app_path])
+                os.path.join(app_path, 'Entitlements.plist')]
+
+    if args.keychain is not None:
+        keychain_path = os.path.abspath(args.keychain)
+        codesign_args.extend(['--keychain', keychain_path])
+
+    codesign_args.extend([app_path])
+
+    codesign_output = check_output(codesign_args)
     puts(codesign_output)
 
-    pwd = os.getcwd()
-    if not os.path.isabs(args.output):
-        output_path = os.path.join(pwd, args.output)
-    else:
-        output_path = args.output
+    output_path = os.path.abspath(args.output)
 
     # Change working dir so 'Payload' is at the root of the archive.
     # Might be a way to do this with args to zip but I couldn't find it.
+    pwd = os.getcwd()
     os.chdir(tmp_dir)
     call(['zip', '-qr', output_path, 'Payload'])
     os.chdir(pwd)
@@ -155,6 +158,7 @@ def main():
     parser_resign.add_argument('--ipa', action='store', required=True)
     parser_resign.add_argument('--identity', action='store', required=True)
     parser_resign.add_argument('--profile', action='store', required=True)
+    parser_resign.add_argument('--keychain', action='store', required=False)
     parser_resign.add_argument('--output', action='store', required=True)
     parser_resign.set_defaults(func=resign)
 
