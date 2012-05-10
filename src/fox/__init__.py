@@ -54,6 +54,26 @@ def _find_prov_profile(input):
 
     return path
 
+def _list_keychains():
+    security_output = check_output(['security', 'list-keychains'])
+    keychains = set([k.strip()[1:-1] for k in security_output.split('\n') if len(k) > 0])
+    return keychains
+
+def _add_keychain(keychain_path):
+    keychain_path = os.path.abspath(keychain_path)
+    keychains = _list_keychains()
+    keychains.add(keychain_path)
+    cmd = ['security', 'list-keychains', '-s']
+    cmd.extend(list(keychains))
+    call(cmd)
+
+def _unlock_keychain(keychain_path, password):
+    call(['security', 'unlock-keychain', '-p', password,
+        os.path.abspath(keychain_path)])
+
+def debug(args):
+    pass
+
 def ipa(args):
     """http://stackoverflow.com/questions/6896029/re-sign-ipa-iphone"""
 
@@ -72,6 +92,9 @@ def ipa(args):
         #'build', 
         'CODE_SIGN_IDENTITY=%s' % (args.identity)])
     if args.keychain is not None:
+        _add_keychain(args.keychain)
+        if args.keychain_password is not None:
+            _unlock_keychain(args.keychain, args.keychain_password)
         build_args.extend(['OTHER_CODE_SIGN_FLAGS=--keychain=%s' %
             os.path.abspath(args.keychain)])
        
@@ -87,13 +110,15 @@ def ipa(args):
     full_product_name = _parse_setenv_var('FULL_PRODUCT_NAME', build_output)
     full_product_path = os.path.join(built_products_dir, full_product_name)
 
-    package_output = check_output(
-            ['xcrun', '-v', 
-                '-sdk', 'iphoneos',
-                'PackageApplication', full_product_path,
-                '--sign', args.identity,
-                '--embed', prov_profile_path]
-            )
+    package_args = ['xcrun', '-v', 
+            '-sdk', 'iphoneos',
+            'PackageApplication', full_product_path,
+            '--sign', args.identity,
+            '--embed', prov_profile_path]
+    #if args.keychain is not None:
+    #    package_args.extend(['--keychain=%s' % os.path.abspath(args.keychain)])
+
+    package_output = check_output(package_args)
     puts(package_output)
 
 def resign(args):
@@ -161,6 +186,7 @@ def main():
     parser_ipa.add_argument('--identity', action='store', required=True)
     parser_ipa.add_argument('--profile', action='store', required=True)
     parser_ipa.add_argument('--keychain', action='store', required=False)
+    parser_ipa.add_argument('--keychain-password', action='store', required=False)
     parser_ipa.set_defaults(func=ipa)
 
     # resign
@@ -172,6 +198,9 @@ def main():
     parser_resign.add_argument('--output', action='store', required=True)
     parser_resign.set_defaults(func=resign)
 
+    parser_debug = subparsers.add_parser('debug', help='debug help')
+    parser_debug.set_defaults(func=debug)
+    
     args = parser.parse_args()
     args.func(args)
 
