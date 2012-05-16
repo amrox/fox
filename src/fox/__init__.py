@@ -1,11 +1,17 @@
 import argparse
-from clint.textui import puts, indent
 from subprocess import call, check_output, Popen, STDOUT, PIPE
 import os, re, sys
 import plistlib
 from tempfile import mkdtemp
 from fnmatch import fnmatch
 import shutil
+
+try:
+    import clint.textui
+    puts = clint.textui.puts
+except ImportError:
+    import util
+    puts = util.puts
 
 #### stolen from provtool https://github.com/mindsnacks/provtool
 
