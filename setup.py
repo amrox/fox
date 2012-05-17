@@ -21,6 +21,7 @@ setup(name='fox',
     long_description=README + '\n\n' + NEWS,
     classifiers=[
       # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
+      'Programming Language :: Python :: 2.7',
     ],
     keywords='xcode',
     author='Andy Mroczkowski',
