@@ -127,6 +127,10 @@ def ipa(args):
     package_output = check_output(package_args)
     puts(package_output)
 
+    full_ipa_path = full_product_path[:-4] + '.ipa'
+    output_path = os.path.abspath(args.output)
+    shutil.move(full_ipa_path, output_path)
+
 def resign(args):
     ipa_path = args.ipa
     if not os.path.exists(ipa_path):
@@ -193,6 +197,7 @@ def main():
     parser_ipa.add_argument('--profile', action='store', required=True)
     parser_ipa.add_argument('--keychain', action='store', required=False)
     parser_ipa.add_argument('--keychain-password', action='store', required=False)
+    parser_ipa.add_argument('--output', action='store', required=True)
     parser_ipa.set_defaults(func=ipa)
 
     # resign
