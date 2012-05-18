@@ -1,6 +1,6 @@
 import argparse
 from subprocess import call, check_output, Popen, STDOUT, PIPE
-import os, re, sys
+import os, re, string, sys
 import plistlib
 from tempfile import mkdtemp
 from fnmatch import fnmatch
@@ -45,7 +45,9 @@ def find_prov_profile_by_name(name, dir=DEFAULT_PROVPROF_DIR):
 #### end provtool
 
 def _parse_setenv_var(var, text):
-    return re.search(r'(setenv %s )(.*)' % var, text).group(2)
+    match = re.search(r'(setenv %s )(.*)' % var, text).group(2)
+    # strip "'s if they exist
+    return string.strip(match, '"')
 
 def _find_prov_profile(input):
     """Tries to find a provisioning profile using a few methods, and returns
@@ -124,10 +126,12 @@ def ipa(args):
     #if args.keychain is not None:
     #    package_args.extend(['--keychain=%s' % os.path.abspath(args.keychain)])
 
-    package_output = check_output(package_args)
-    puts(package_output)
+    #package_output = check_output(package_args)
+    #puts(package_output)
+    print package_args
+    call(package_args)
 
-    full_ipa_path = full_product_path[:-4] + '.ipa'
+    full_ipa_path = full_product_path[:-3] + 'ipa'
     output_path = os.path.abspath(args.output)
     shutil.move(full_ipa_path, output_path)
 
