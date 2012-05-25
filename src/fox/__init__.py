@@ -118,6 +118,10 @@ def ipa(args):
     full_product_name = _parse_setenv_var('FULL_PRODUCT_NAME', build_output)
     full_product_path = os.path.join(built_products_dir, full_product_name)
 
+    # unlock the keychain again
+    if args.keychain_password is not None:
+        _unlock_keychain(args.keychain, args.keychain_password)
+
     package_args = ['xcrun', '-v', 
             '-sdk', 'iphoneos',
             'PackageApplication', full_product_path,
