@@ -36,6 +36,10 @@ fox is a set of tools and utilities for building iOS and Mac projects. fox is no
     * `--keychain` Use a keychain file instead of the default keychain.
     * `---output` Path to output re-signed IPA file.
                    
+# Installation
+
+  This should work:
+  ```(sudo) pip install --upgrade git+ssh://git@github.com/amrox/fox.git#egg=fox```
 
 # License
 
