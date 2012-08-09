@@ -57,3 +57,4 @@ Description: This file requires editing
         
 Keywords: xcode
 Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 2.7
