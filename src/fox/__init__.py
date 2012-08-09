@@ -5,6 +5,7 @@ import plistlib
 from tempfile import mkdtemp
 from fnmatch import fnmatch
 import shutil
+import pipes
 
 try:
     import clint.textui
@@ -44,6 +45,12 @@ def find_prov_profile_by_name(name, dir=DEFAULT_PROVPROF_DIR):
 
 #### end provtool
 
+def _shellify(args):
+    return " ".join(pipes.quote(s) for s in args)
+
+def _join_cmds(*cmds):
+    return " ; ".join(cmds)
+
 def _parse_setenv_var(var, text):
     match = re.search(r'(setenv %s )(.*)' % var, text).group(2)
     # strip "'s if they exist
@@ -75,11 +82,14 @@ def _add_keychain(keychain_path):
     cmd.extend(list(keychains))
     check_call(cmd)
 
+def _unlock_keychain_cmd(keychain_path, password):
+    args = ['security', '-v', 'unlock-keychain', '-p', password,
+        os.path.abspath(keychain_path)]
+    return _shellify(args)
+
 def _unlock_keychain(keychain_path, password):
-    #check_call(['security', '-v', 'unlock-keychain', '-p', password,
-    #    os.path.abspath(keychain_path)], shell=True)
-    check_call('security -v unlock-keychain -p %s %s' % 
-            (password, os.path.abspath(keychain_path)), shell=True)
+    cmd = _unlock_keychain_cmd(keychain_path, password)
+    check_call(cmd, shell=True)
 
 def debug(args):
     pass
@@ -103,18 +113,30 @@ def ipa(args):
         'CODE_SIGN_IDENTITY=%s' % (args.identity)])
     if args.keychain is not None:
         _add_keychain(args.keychain)
-        if args.keychain_password is not None:
-            _unlock_keychain(args.keychain, args.keychain_password)
         build_args.extend(['OTHER_CODE_SIGN_FLAGS=--keychain=%s' %
             os.path.abspath(args.keychain)])
+
+    should_unlock_keychain = args.keychain is not None and args.keychain_password is not None
        
-    p = Popen(build_args, stderr=STDOUT, stdout=PIPE, shell=True)
+    build_cmd = _shellify(build_args)
+    if should_unlock_keychain:
+        # unlocking keychain in the same shell to try to prevent 
+        # "User Interaction is Not Allowed" errors
+        unlock_keychain_cmd = _unlock_keychain_cmd(
+                args.keychain, args.keychain_password)
+        build_cmd = _join_cmds(unlock_keychain_cmd, build_cmd)
+    
+    p = Popen(build_cmd, stderr=STDOUT, stdout=PIPE, shell=True)
     build_output = ''
     while True:
         line = p.stdout.readline()
         if not line: break
         build_output += line
         puts(line, newline=False)
+    p.wait()
+    if p.returncode != 0:
+        print "Process exited with non-zero status " + str(p.returncode)
+        sys.exit(1)
 
     built_products_dir = _parse_setenv_var('BUILT_PRODUCTS_DIR', build_output)
     full_product_name = _parse_setenv_var('FULL_PRODUCT_NAME', build_output)
@@ -132,10 +154,12 @@ def ipa(args):
     #if args.keychain is not None:
     #    package_args.extend(['--keychain=%s' % os.path.abspath(args.keychain)])
 
-    #package_output = check_output(package_args)
-    #puts(package_output)
-    print package_args
-    check_call(package_args)
+    package_cmd = _shellify(package_args)
+    print package_cmd
+    if should_unlock_keychain:
+        package_cmd = _join_cmds(unlock_keychain_cmd, package_cmd)
+
+    check_call(package_cmd, shell=True)
 
     full_ipa_path = full_product_path[:-3] + 'ipa'
     output_path = os.path.abspath(args.output)
