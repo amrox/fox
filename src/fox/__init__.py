@@ -76,7 +76,7 @@ def _add_keychain(keychain_path):
     check_call(cmd)
 
 def _unlock_keychain(keychain_path, password):
-    check_call(['security', 'unlock-keychain', '-p', password,
+    check_call(['security', '-v', 'unlock-keychain', '-p', password,
         os.path.abspath(keychain_path)], shell=True)
 
 def debug(args):
