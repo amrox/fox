@@ -39,7 +39,7 @@ fox is a set of tools and utilities for building iOS and Mac projects. fox is no
 # Installation
 
   This should work:
-  ```(sudo) pip install -I git+ssh://git@github.com/amrox/fox.git#egg=fox```
+  ```(sudo) pip install -I git+https://github.com/amrox/fox.git#egg=fox```
 
 # License
 
