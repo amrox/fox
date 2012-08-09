@@ -19,7 +19,7 @@ fox is a set of tools and utilities for building iOS and Mac projects. fox is no
 	* `--config` The build configuration. Defaults to `Debug`.
     * `--target` Refers to the name of the target in the Xcode project.
     * `--identity` Name of the code-signing identity, i.e. 'iPhone Distribution: My Company'.
-    * `--profile` Provisioning profile. If a valid path is supplied, that profile is used. Also, a name can be provided, (i.e. 'MyApp Ad Hoc') and fox with search for that provisioning profile in default locations (current just `~/Library/MobileDevice/Provisioning Profiles`).
+    * `--profile` Provisioning profile. If a valid path is supplied, that profile is used. Also, a name can be provided, (i.e. 'MyApp Ad Hoc') and fox with search for that provisioning profile in default locations (currently just `~/Library/MobileDevice/Provisioning Profiles`).
     * `--keychain` Use a keychain file instead of the default keychain.
 
 ### resign
@@ -32,10 +32,14 @@ fox is a set of tools and utilities for building iOS and Mac projects. fox is no
     * `-h` Print help.
     * `--ipa` Path to IPA file to re-sign.
     * `--identity` Name of the code-signing identity, i.e. 'iPhone Distribution: My Company'.
-    * `--profile` Provisioning profile. If a valid path is supplied, that profile is used. Also, a name can be provided, (i.e. 'MyApp Ad Hoc') and fox with search for that provisioning profile in default locations (current just `~/Library/MobileDevice/Provisioning Profiles`).
+    * `--profile` Provisioning profile. If a valid path is supplied, that profile is used. Also, a name can be provided, (i.e. 'MyApp Ad Hoc') and fox with search for that provisioning profile in default locations (currently just `~/Library/MobileDevice/Provisioning Profiles`).
     * `--keychain` Use a keychain file instead of the default keychain.
     * `---output` Path to output re-signed IPA file.
                    
+# Installation
+
+  This should work:
+  ```(sudo) pip install -I git+ssh://git@github.com/amrox/fox.git#egg=fox```
 
 # License
 
