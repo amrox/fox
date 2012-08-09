@@ -1,5 +1,5 @@
 import argparse
-from subprocess import call, check_output, Popen, STDOUT, PIPE
+from subprocess import check_call, check_output, Popen, STDOUT, PIPE
 import os, re, string, sys
 import plistlib
 from tempfile import mkdtemp
@@ -73,11 +73,11 @@ def _add_keychain(keychain_path):
     keychains.add(keychain_path)
     cmd = ['security', 'list-keychains', '-s']
     cmd.extend(list(keychains))
-    call(cmd)
+    check_call(cmd)
 
 def _unlock_keychain(keychain_path, password):
-    call(['security', 'unlock-keychain', '-p', password,
-        os.path.abspath(keychain_path)])
+    check_call(['security', 'unlock-keychain', '-p', password,
+        os.path.abspath(keychain_path)], shell=True)
 
 def debug(args):
     pass
@@ -106,7 +106,7 @@ def ipa(args):
         build_args.extend(['OTHER_CODE_SIGN_FLAGS=--keychain=%s' %
             os.path.abspath(args.keychain)])
        
-    p = Popen(build_args, stderr=STDOUT, stdout=PIPE)
+    p = Popen(build_args, stderr=STDOUT, stdout=PIPE, shell=True)
     build_output = ''
     while True:
         line = p.stdout.readline()
@@ -133,7 +133,7 @@ def ipa(args):
     #package_output = check_output(package_args)
     #puts(package_output)
     print package_args
-    call(package_args)
+    check_call(package_args)
 
     full_ipa_path = full_product_path[:-3] + 'ipa'
     output_path = os.path.abspath(args.output)
@@ -147,7 +147,7 @@ def resign(args):
         sys.exit(1)
 
     tmp_dir = mkdtemp()
-    call(['unzip', ipa_path, '-d', tmp_dir])
+    check_call(['unzip', ipa_path, '-d', tmp_dir])
 
     payload_path = os.path.join(tmp_dir, 'Payload')
     for file in os.listdir(payload_path):
@@ -184,7 +184,7 @@ def resign(args):
     # Might be a way to do this with args to zip but I couldn't find it.
     pwd = os.getcwd()
     os.chdir(tmp_dir)
-    call(['zip', '-qr', output_path, 'Payload'])
+    check_call(['zip', '-qr', output_path, 'Payload'])
     os.chdir(pwd)
 
     shutil.rmtree(tmp_dir)
