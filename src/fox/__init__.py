@@ -36,6 +36,7 @@ def name_from_prov_profile_path(filePath):
     return plist['Name']
 
 def find_prov_profile_by_name(name, dir=DEFAULT_PROVPROF_DIR):
+    if not os.path.exists(dir): return None
     for f in os.listdir(dir):
         if is_prov_profile(f):
             path = os.path.join(dir, f)
