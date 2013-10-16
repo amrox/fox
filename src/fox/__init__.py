@@ -1,6 +1,7 @@
 import argparse
 import os
 import plistlib
+import provtool
 import re
 import shutil
 import sys
@@ -11,6 +12,7 @@ from tempfile import mkdtemp
 
 from .helpers import join_cmds, shellify, run_cmd, puts
 from .keychain import add_keychain_cmd, unlock_keychain_cmd, install_keychain, unlock_keychain, find_keychain
+from .provisioningprofile import install_profile
 
 #### stolen from provtool https://github.com/mindsnacks/provtool
 
@@ -280,6 +282,10 @@ def cmd_unlock_keychain(args):
     unlock_keychain(args.keychain, args.password)
 
 
+def cmd_install_profile(args):
+    print install_profile(args.profile_path)
+
+
 def cmd_debug(args):
     pass
 
@@ -318,6 +324,11 @@ def main():
     parser_resign.add_argument('--keychain', action='store', required=False)
     parser_resign.add_argument('--output', action='store', required=True)
     parser_resign.set_defaults(func=resign)
+
+    # install-profile
+    parser_install_profile = subparsers.add_parser('install-profile', help='Install a provisioning profile.')
+    parser_install_profile.add_argument('profile_path', action='store')
+    parser_install_profile.set_defaults(func=cmd_install_profile)
 
     # install-keychain
     parser_install_keychain = subparsers.add_parser('install-keychain', help='Install a keychain file.')
