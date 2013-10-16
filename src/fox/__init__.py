@@ -1,25 +1,26 @@
 import argparse
-from subprocess import check_call, check_output, Popen, STDOUT, PIPE
-import os, re, string, sys
+import os
 import plistlib
-from tempfile import mkdtemp
-from fnmatch import fnmatch
+import re
 import shutil
-import pipes
+import sys
+import toml
+from fnmatch import fnmatch
+from subprocess import check_call, check_output
+from tempfile import mkdtemp
 
-try:
-    import clint.textui
-    puts = clint.textui.puts
-except ImportError:
-    import util
-    puts = util.puts
+from .helpers import join_cmds, shellify, run_cmd, puts
+from .keychain import add_keychain_cmd, unlock_keychain_cmd, install_keychain, unlock_keychain, find_keychain
 
 #### stolen from provtool https://github.com/mindsnacks/provtool
 
 DEFAULT_PROVPROF_DIR = os.path.expanduser('~/Library/MobileDevice/Provisioning Profiles')
+DEFAULT_CONFIG_PATH = os.path.expanduser("~/.fox")
+
 
 def is_prov_profile(filePath):
     return filePath.endswith('.mobileprovision')
+
 
 def plist_string_from_prov_profile_path(path):
     beginToken = '<?xml'
@@ -27,16 +28,19 @@ def plist_string_from_prov_profile_path(path):
     f = open(path)
     data = f.read()
     begin = data.index(beginToken)
-    end = data.rindex(endToken) + len(endToken) 
+    end = data.rindex(endToken) + len(endToken)
     return data[begin:end]
+
 
 def name_from_prov_profile_path(filePath):
     plistString = plist_string_from_prov_profile_path(filePath)
     plist = plistlib.readPlistFromString(plistString)
     return plist['Name']
 
+
 def find_prov_profile_by_name(name, dir=DEFAULT_PROVPROF_DIR):
-    if not os.path.exists(dir): return None
+    if not os.path.exists(dir):
+        return None
     for f in os.listdir(dir):
         if is_prov_profile(f):
             path = os.path.join(dir, f)
@@ -46,16 +50,6 @@ def find_prov_profile_by_name(name, dir=DEFAULT_PROVPROF_DIR):
 
 #### end provtool
 
-def _shellify(args):
-    return " ".join(pipes.quote(s) for s in args)
-
-def _join_cmds(*cmds):
-    return " ; ".join(cmds)
-
-def _parse_setenv_var(var, text):
-    match = re.search(r'(setenv %s )(.*)' % var, text).group(2)
-    # strip "'s if they exist
-    return string.strip(match, '"')
 
 def _find_prov_profile(input):
     """Tries to find a provisioning profile using a few methods, and returns
@@ -63,110 +57,141 @@ def _find_prov_profile(input):
 
     # check if it's a valid path first
     if os.path.exists(input):
-        return os.path.abspath(input)
+        return os.patabspath(input)
 
     # assume it's a name of a provisioning profile
     path = find_prov_profile_by_name(input)
 
     return path
 
-def _list_keychains():
-    security_output = check_output(['security', 'list-keychains'])
-    keychains = set([k.strip()[1:-1] for k in security_output.split('\n') if len(k) > 0])
-    return keychains
 
-def _add_keychain(keychain_path):
-    keychain_path = os.path.abspath(keychain_path)
-    keychains = _list_keychains()
-    keychains.add(keychain_path)
-    cmd = ['security', 'list-keychains', '-s']
-    cmd.extend(list(keychains))
-    check_call(cmd)
+def determine_target_args(workspace=None, scheme=None, project=None, target=None, **kwargs):
+    if workspace is None and project is None:
+        raise ValueError("Either workspace or project must be specified.")
 
-def _unlock_keychain_cmd(keychain_path, password):
-    args = ['security', '-v', 'unlock-keychain', '-p', password,
-        os.path.abspath(keychain_path)]
-    return _shellify(args)
+    if workspace is not None:
+        if scheme is None:
+            raise ValueError("If workspace is specified scheme must be also.")
+        else:
+            return ['-workspace', workspace, '-scheme', scheme]
 
-def _unlock_keychain(keychain_path, password):
-    cmd = _unlock_keychain_cmd(keychain_path, password)
-    check_call(cmd, shell=True)
+    if project is not None:
+        if target is None:
+            raise ValueError("If project is specified target must be also.")
+        else:
+            return ['-project', project, '-target', target]
 
-def debug(args):
-    pass
+    raise NotImplementedError()
 
-def ipa(args):
-    """http://stackoverflow.com/questions/6896029/re-sign-ipa-iphone"""
 
-    prov_profile_path = _find_prov_profile(args.profile)
+def get_build_settings(workspace=None, scheme=None, project=None, target=None):
+
+    cmd = ['xcodebuild', '-showBuildSettings']
+    cmd.extend(determine_target_args(workspace=workspace, scheme=scheme,
+                                     project=project, target=target))
+
+    build_settings = dict()
+    output = check_output(cmd)
+    for l in output.splitlines():
+        # match lines like this:
+        #     KEY = VAL
+        if re.match(r'\s+.*( = ).*', l):
+            key, val = [x.strip() for x in l.split('=')[:2]]
+            build_settings[key] = val
+
+    return build_settings
+
+
+def build_ipa(workspace=None, scheme=None, project=None, target=None,
+              config=None, profile=None, identity=None, keychain=None,
+              keychain_password=None, output=None, overwrite=False, **kwargs):
+
+    prov_profile_path = _find_prov_profile(profile)
     if prov_profile_path is None:
         # TODO: better error handling
         print "couldn't find profile"
         sys.exit(1)
-   
-    build_args = ['xcodebuild', '-sdk', 'iphoneos']
-    if args.project is not None:
-        build_args.extend(['-project', args.project])
-    build_args.extend([
-        '-target', args.target, 
-        '-config', args.config, 
-        #'build', 
-        'CODE_SIGN_IDENTITY=%s' % (args.identity)])
-    if args.keychain is not None:
-        _add_keychain(args.keychain)
-        build_args.extend(['OTHER_CODE_SIGN_FLAGS=--keychain=%s' %
-            os.path.abspath(args.keychain)])
 
-    should_unlock_keychain = args.keychain is not None and args.keychain_password is not None
-       
-    build_cmd = _shellify(build_args)
-    if should_unlock_keychain:
-        # unlocking keychain in the same shell to try to prevent 
+    build_settings = get_build_settings(workspace=workspace, scheme=scheme,
+                                        project=project, target=target)
+
+    if keychain is not None and keychain_password is not None:
+        keychain_cmd = unlock_keychain_cmd(
+            keychain, keychain_password)
+    else:
+        keychain_cmd = None
+
+    build_args = ['xcodebuild', '-sdk', 'iphoneos', 'build']
+    build_args.extend(determine_target_args(workspace=workspace, scheme=scheme,
+                                            project=project, target=target))
+
+    if identity is not None:
+        build_args.extend([
+            'CODE_SIGN_IDENTITY=%s' % (identity)
+        ])
+
+    if keychain_cmd is not None:
+        run_cmd(add_keychain_cmd(keychain))
+
+        build_args.extend([
+            'OTHER_CODE_SIGN_FLAGS=--keychain=%s' %
+            find_keychain(keychain)
+        ])
+
+    build_cmd = shellify(build_args)
+    if keychain_cmd is not None:
+        # unlocking keychain in the same shell to try to prevent
         # "User Interaction is Not Allowed" errors
-        unlock_keychain_cmd = _unlock_keychain_cmd(
-                args.keychain, args.keychain_password)
-        build_cmd = _join_cmds(unlock_keychain_cmd, build_cmd)
-    
-    p = Popen(build_cmd, stderr=STDOUT, stdout=PIPE, shell=True)
-    build_output = ''
-    while True:
-        line = p.stdout.readline()
-        if not line: break
-        build_output += line
-        puts(line, newline=False)
-    p.wait()
-    if p.returncode != 0:
-        print "Process exited with non-zero status " + str(p.returncode)
-        sys.exit(1)
+        build_cmd = join_cmds(keychain_cmd, build_cmd)
 
-    built_products_dir = _parse_setenv_var('BUILT_PRODUCTS_DIR', build_output)
-    full_product_name = _parse_setenv_var('FULL_PRODUCT_NAME', build_output)
+    print build_cmd
+    run_cmd(build_cmd)
+
+    built_products_dir = build_settings['BUILT_PRODUCTS_DIR']
+    full_product_name = build_settings['FULL_PRODUCT_NAME']
     full_product_path = os.path.join(built_products_dir, full_product_name)
 
     # unlock the keychain again
-    if args.keychain_password is not None:
-        _unlock_keychain(args.keychain, args.keychain_password)
+    if keychain_password is not None:
+        run_cmd(keychain_cmd)
 
-    package_args = ['xcrun', '-v', 
-            '-sdk', 'iphoneos',
-            'PackageApplication', full_product_path,
-            '--sign', args.identity,
-            '--embed', prov_profile_path]
-    #if args.keychain is not None:
-    #    package_args.extend(['--keychain=%s' % os.path.abspath(args.keychain)])
-
-    package_cmd = _shellify(package_args)
+    package_args = ['xcrun', '-v',
+                    '-sdk', 'iphoneos',
+                    'PackageApplication', full_product_path,
+                    '--embed', prov_profile_path]
+    if identity is not None:
+        package_args.extend([
+            '--sign', identity,
+        ])
+    package_cmd = shellify(package_args)
     print package_cmd
-    if should_unlock_keychain:
-        package_cmd = _join_cmds(unlock_keychain_cmd, package_cmd)
+
+    if keychain_cmd is not None:
+        package_cmd = join_cmds(keychain_cmd, package_cmd)
 
     check_call(package_cmd, shell=True)
 
+    # shutil.move has some odd behavior. If you specifiy a full absolute path as
+    # the destination, and the path exists, it will overwrite it. If you
+    # specify a directory as the output path, and a file in that directory
+    # exists, it will fail. We try to preserve that behavior.
+
     full_ipa_path = full_product_path[:-3] + 'ipa'
-    output_path = os.path.abspath(args.output)
+    output_path = os.path.abspath(output)
+    full_output_path = output_path
+
+    if os.path.isdir(output_path):
+        full_output_path = os.path.join(output_path, os.path.basename(full_ipa_path))
+
+    if overwrite and os.path.exists(full_output_path):
+        os.remove(full_output_path)
+
     shutil.move(full_ipa_path, output_path)
 
+
 def resign(args):
+    """http://stackoverflow.com/questions/6896029/re-sign-ipa-iphone"""
+
     ipa_path = args.ipa
     if not os.path.exists(ipa_path):
         # TODO: better error
@@ -189,15 +214,15 @@ def resign(args):
     src_prov_profile_path = _find_prov_profile(args.profile)
     shutil.copyfile(src_prov_profile_path, embedded_prov_profile_path)
 
-    codesign_args = ['codesign', '-f', 
-                '-s', args.identity,
-                '--resource-rules',
-                os.path.join(app_path, 'ResourceRules.plist'),
-                '--entitlements',
-                os.path.join(app_path, 'Entitlements.plist')]
+    codesign_args = ['codesign', '-f',
+                     '-s', args.identity,
+                     '--resource-rules',
+                     os.path.join(app_path, 'ResourceRules.plist'),
+                     '--entitlements',
+                     os.path.join(app_path, 'Entitlements.plist')]
 
     if args.keychain is not None:
-        keychain_path = os.path.abspath(args.keychain)
+        keychain_path = find_keychain(args.keychain)
         codesign_args.extend(['--keychain', keychain_path])
 
     codesign_args.extend([app_path])
@@ -215,28 +240,78 @@ def resign(args):
     os.chdir(pwd)
 
     shutil.rmtree(tmp_dir)
-    
+
+
+def load_fox_config(fox_config_path):
+    return toml.load(fox_config_path)
+
+
+def load_fox_config_from_args(args):
+    return load_fox_config(args.config_path)
+
+
+def get_presets(fox_config, preset_name):
+    preset_key = 'preset:%s' % (preset_name)
+    return fox_config.get(preset_key)
+
+
+def cmd_ipa(args):
+
+    build_ipa_args = dict()
+
+    if args.preset is not None:
+        fox_config = load_fox_config_from_args(args)
+        presets = get_presets(fox_config, args.preset)
+        print "Using presets:"
+        for (k, v) in presets.iteritems():
+            print "   %s = %s" % (k, v)
+        build_ipa_args = dict(build_ipa_args.items() + presets.items())
+
+    build_ipa_args = dict(vars(args).items() + build_ipa_args.items())
+
+    build_ipa(**build_ipa_args)
+
+
+def cmd_install_keychain(args):
+    print install_keychain(args.keychain_path)
+
+
+def cmd_unlock_keychain(args):
+    unlock_keychain(args.keychain, args.password)
+
+
+def cmd_debug(args):
+    pass
+
+
 def main():
     parser = argparse.ArgumentParser(description='')
+    parser.add_argument('-C', action='store', required=False, default=DEFAULT_CONFIG_PATH,
+                        dest='config_path',
+                        help="Path to fox config, defaults to '~/.fox'")
 
     subparsers = parser.add_subparsers(title='subcommands',
-            description='valid subcommands',
-            help='additional help')
+                                       description='valid subcommands',
+                                       help='additional help')
 
     # ipa
-    parser_ipa = subparsers.add_parser('ipa', help='ipa help')
+    parser_ipa = subparsers.add_parser('ipa', help='Create a signed ipa file.')
+    parser_ipa.add_argument('--preset', action='store', required=False)
     parser_ipa.add_argument('--project', action='store', required=False)
-    parser_ipa.add_argument('--target', action='store', required=True)
+    parser_ipa.add_argument('--target', action='store', required=False)
+    parser_ipa.add_argument('--workspace', action='store', required=False)
+    parser_ipa.add_argument('--scheme', action='store', required=False)
     parser_ipa.add_argument('--config', action='store', default='Debug', required=False)
-    parser_ipa.add_argument('--identity', action='store', required=True)
-    parser_ipa.add_argument('--profile', action='store', required=True)
+    parser_ipa.add_argument('--identity', action='store', required=False)
+    parser_ipa.add_argument('--profile', action='store', required=False)
     parser_ipa.add_argument('--keychain', action='store', required=False)
     parser_ipa.add_argument('--keychain-password', action='store', required=False)
-    parser_ipa.add_argument('--output', action='store', required=True)
-    parser_ipa.set_defaults(func=ipa)
+    parser_ipa.add_argument('--output', action='store', default='.', required=False)
+    parser_ipa.add_argument('--overwrite', action='store_true', default=False, required=False)
+    parser_ipa.set_defaults(func=cmd_ipa)
 
     # resign
-    parser_resign = subparsers.add_parser('resign', help='resign help')
+    parser_resign = subparsers.add_parser('resign', help='Resign an ipa file.')
     parser_resign.add_argument('--ipa', action='store', required=True)
     parser_resign.add_argument('--identity', action='store', required=True)
     parser_resign.add_argument('--profile', action='store', required=True)
@@ -244,9 +319,20 @@ def main():
     parser_resign.add_argument('--output', action='store', required=True)
     parser_resign.set_defaults(func=resign)
 
+    # install-keychain
+    parser_install_keychain = subparsers.add_parser('install-keychain', help='Install a keychain file.')
+    parser_install_keychain.add_argument('keychain_path', action='store')
+    parser_install_keychain.set_defaults(func=cmd_install_keychain)
+
+    # unlock-keychain
+    parser_unlock_keychain = subparsers.add_parser('unlock-keychain', help='Unlock a keychain.')
+    parser_unlock_keychain.add_argument('keychain', action='store', help='Keychain name or path')
+    parser_unlock_keychain.add_argument('password', action='store', nargs='?',
+                                        default='', help='Keychain password')
+    parser_unlock_keychain.set_defaults(func=cmd_unlock_keychain)
+
     parser_debug = subparsers.add_parser('debug', help='debug help')
-    parser_debug.set_defaults(func=debug)
-    
+    parser_debug.set_defaults(func=cmd_debug)
+
     args = parser.parse_args()
     args.func(args)
-
