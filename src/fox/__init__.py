@@ -1,7 +1,6 @@
 import argparse
 import os
 import plistlib
-import provtool
 import re
 import shutil
 import sys
@@ -18,6 +17,7 @@ from .provisioningprofile import install_profile
 
 DEFAULT_PROVPROF_DIR = os.path.expanduser('~/Library/MobileDevice/Provisioning Profiles')
 DEFAULT_CONFIG_PATH = os.path.expanduser("~/.fox")
+DEFAULT_BUILD_CONFIG = "Debug"
 
 
 def is_prov_profile(filePath):
@@ -86,9 +86,11 @@ def determine_target_args(workspace=None, scheme=None, project=None, target=None
     raise NotImplementedError()
 
 
-def get_build_settings(workspace=None, scheme=None, project=None, target=None):
+def get_build_settings(workspace=None, scheme=None, project=None, target=None, config=None):
 
-    cmd = ['xcodebuild', '-showBuildSettings']
+    config = config or DEFAULT_BUILD_CONFIG
+
+    cmd = ['xcodebuild', '-showBuildSettings', "-config", config]
     cmd.extend(determine_target_args(workspace=workspace, scheme=scheme,
                                      project=project, target=target))
 
@@ -307,7 +309,7 @@ def main():
     parser_ipa.add_argument('--target', action='store', required=False)
     parser_ipa.add_argument('--workspace', action='store', required=False)
     parser_ipa.add_argument('--scheme', action='store', required=False)
-    parser_ipa.add_argument('--config', action='store', default='Debug', required=False)
+    parser_ipa.add_argument('--config', action='store', default=DEFAULT_BUILD_CONFIG, required=False)
     parser_ipa.add_argument('--identity', action='store', required=False)
     parser_ipa.add_argument('--profile', action='store', required=False)
     parser_ipa.add_argument('--keychain', action='store', required=False)
