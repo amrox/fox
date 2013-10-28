@@ -36,6 +36,6 @@ setup(name='fox',
     install_requires=install_requires,
     entry_points={
         'console_scripts':
-            ['fox=fox:main']
+            ['fox=fox.cli:main']
     }
 )
