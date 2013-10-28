@@ -86,16 +86,10 @@ def determine_target_args(workspace=None, scheme=None, project=None, target=None
     raise NotImplementedError()
 
 
-def get_build_settings(workspace=None, scheme=None, project=None, target=None, config=None):
-
-    config = config or DEFAULT_BUILD_CONFIG
-
-    cmd = ['xcodebuild', '-showBuildSettings', "-config", config]
-    cmd.extend(determine_target_args(workspace=workspace, scheme=scheme,
-                                     project=project, target=target))
+def parse_build_settings(output):
 
     build_settings = dict()
-    output = check_output(cmd)
+
     for l in output.splitlines():
         # match lines like this:
         #     KEY = VAL
@@ -117,9 +111,6 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
         print "couldn't find profile"
         sys.exit(1)
 
-    build_settings = get_build_settings(workspace=workspace, scheme=scheme,
-                                        project=project, target=target)
-
     if keychain is not None and keychain_password is not None:
         keychain_cmd = unlock_keychain_cmd(
             keychain, keychain_password)
@@ -128,7 +119,7 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
 
     config = config or DEFAULT_BUILD_CONFIG
 
-    build_args = ['xcodebuild', '-sdk', 'iphoneos', 'build', '-config', config]
+    build_args = ['-sdk', 'iphoneos', 'build', '-config', config]
     build_args.extend(determine_target_args(workspace=workspace, scheme=scheme,
                                             project=project, target=target))
 
@@ -150,7 +141,12 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
             'SYMROOT=%s' % (os.path.realpath(build_dir))
         ])
 
-    build_cmd = shellify(build_args)
+    build_settings_cmd = ['xcodebuild', '-showBuildSettings'] + build_args
+    print shellify(build_settings_cmd)
+    build_settings_output = check_output(build_settings_cmd)
+    build_settings = parse_build_settings(build_settings_output)
+
+    build_cmd = shellify(['xcodebuild'] + build_args)
     if keychain_cmd is not None:
         # unlocking keychain in the same shell to try to prevent
         # "User Interaction is Not Allowed" errors
