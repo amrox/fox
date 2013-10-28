@@ -126,7 +126,9 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
     else:
         keychain_cmd = None
 
-    build_args = ['xcodebuild', '-sdk', 'iphoneos', 'build']
+    config = config or DEFAULT_BUILD_CONFIG
+
+    build_args = ['xcodebuild', '-sdk', 'iphoneos', 'build', '-config', config]
     build_args.extend(determine_target_args(workspace=workspace, scheme=scheme,
                                             project=project, target=target))
 
