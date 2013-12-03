@@ -6,12 +6,15 @@ README = open(os.path.join(here, 'README.rst')).read()
 NEWS = open(os.path.join(here, 'NEWS.txt')).read()
 
 
-version = '0.1'
+version = '0.1.0'
 
 install_requires = [
     # List your project dependencies here.
     # For more details, see:
     # http://packages.python.org/distribute/setuptools.html#declaring-dependencies
+    "toml==0.8.0",
+    "provtool==0.2.2",
+    "biplist==0.6",
 ]
 
 
@@ -34,6 +37,6 @@ setup(name='fox',
     install_requires=install_requires,
     entry_points={
         'console_scripts':
-            ['fox=fox:main']
+            ['fox=fox.cli:main']
     }
 )
