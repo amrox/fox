@@ -1,4 +1,5 @@
 import argparse
+import biplist
 import os
 import plistlib
 import re
@@ -159,6 +160,12 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
     full_product_name = build_settings['FULL_PRODUCT_NAME']
     full_product_path = os.path.join(built_products_dir, full_product_name)
 
+    # read Info.plist
+    info_plist_path = os.path.join(built_products_dir, build_settings['INFOPLIST_PATH'])
+    info_plist = biplist.readPlist(info_plist_path)
+    build_version = info_plist['CFBundleVersion']
+    marketing_version = info_plist['CFBundleShortVersionString']
+
     # unlock the keychain again
     if keychain_password is not None:
         run_cmd(keychain_cmd)
@@ -189,12 +196,14 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
     full_output_path = output_path
 
     if os.path.isdir(output_path):
-        full_output_path = os.path.join(output_path, os.path.basename(full_ipa_path))
+        app_name = os.path.splitext(full_product_name)[0]
+        ipa_name = '%s_%s_%s_%s.ipa' % (app_name, marketing_version, build_version, config)
+        full_output_path = os.path.join(output_path, ipa_name)
 
     if overwrite and os.path.exists(full_output_path):
         os.remove(full_output_path)
 
-    shutil.move(full_ipa_path, output_path)
+    shutil.move(full_ipa_path, full_output_path)
 
 
 def resign(args):

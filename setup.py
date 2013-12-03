@@ -14,6 +14,7 @@ install_requires = [
     # http://packages.python.org/distribute/setuptools.html#declaring-dependencies
     "toml==0.8.0",
     "provtool==0.2.2",
+    "biplist==0.6",
 ]
 
 
