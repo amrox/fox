@@ -19,8 +19,8 @@ def join_cmds(*cmds):
     return " ; ".join(cmds)
 
 
-def run_cmd(cmd):
-    p = Popen(cmd, stderr=STDOUT, stdout=PIPE, shell=True)
+def run_cmd(cmd, cwd=None):
+    p = Popen(cmd, stderr=STDOUT, stdout=PIPE, cwd=cwd, shell=True)
     output = ''
     while True:
         line = p.stdout.readline()

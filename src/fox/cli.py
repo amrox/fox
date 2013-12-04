@@ -85,6 +85,7 @@ def main():
     parser_ipa.add_argument('--keychain-password', action='store', required=False)
     parser_ipa.add_argument('--output', action='store', default='.', required=False)
     parser_ipa.add_argument('--overwrite', action='store_true', default=False, required=False)
+    parser_ipa.add_argument('--dsym', action='store_true', default=False, required=False)
     parser_ipa.add_argument('--build_dir', action='store', required=False)
     parser_ipa.set_defaults(func=cmd_ipa)
 
