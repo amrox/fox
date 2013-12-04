@@ -63,7 +63,7 @@ def _find_prov_profile(input):
 def build_ipa(workspace=None, scheme=None, project=None, target=None,
               config=None, profile=None, identity=None, keychain=None,
               keychain_password=None, output=None, overwrite=False,
-              build_dir=None, **kwargs):
+              build_dir=None, dsym=False, **kwargs):
 
     prov_profile_path = _find_prov_profile(profile)
     if prov_profile_path is None:
@@ -163,6 +163,18 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
         os.remove(full_output_path)
 
     shutil.move(full_ipa_path, full_output_path)
+
+    if dsym:
+        dsym_name = os.path.basename(full_product_path) + '.dSYM'
+
+        ipa_name = os.path.basename(full_output_path)
+        output_dir = os.path.dirname(full_output_path)
+
+        dsym_zip_name = os.path.splitext(ipa_name)[0] + '.dSYM.zip'
+        dsym_zip_path = os.path.join(output_dir, dsym_zip_name)
+
+        run_cmd(shellify(['zip', '-y', '-r', dsym_zip_path, dsym_name]),
+                cwd=built_products_dir)
 
 
 def resign_ipa(ipa=None, profile=None, identity=None, keychain=None,
