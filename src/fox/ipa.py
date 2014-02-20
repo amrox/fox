@@ -63,7 +63,7 @@ def _find_prov_profile(input):
 def build_ipa(workspace=None, scheme=None, project=None, target=None,
               config=None, profile=None, identity=None, keychain=None,
               keychain_password=None, output=None, overwrite=False,
-              build_dir=None, dsym=False, **kwargs):
+              build_dir=None, dsym=False, clean=False, **kwargs):
 
     prov_profile_path = _find_prov_profile(profile)
     if prov_profile_path is None:
@@ -79,7 +79,12 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
 
     config = config or defaults['build_config']
 
-    build_args = ['-sdk', 'iphoneos', 'build', '-config', config]
+    build_args = ['-sdk', 'iphoneos']
+
+    if clean:
+        build_args.extend(['clean'])
+
+    build_args.extend(['build', '-config', config])
     build_args.extend(_determine_target_args(workspace=workspace, scheme=scheme,
                                              project=project, target=target))
 
