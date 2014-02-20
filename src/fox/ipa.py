@@ -65,11 +65,12 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
               keychain_password=None, output=None, overwrite=False,
               build_dir=None, dsym=False, clean=False, **kwargs):
 
-    prov_profile_path = _find_prov_profile(profile)
-    if prov_profile_path is None:
-        # TODO: better error handling
-        print "couldn't find profile"
-        sys.exit(1)
+    if profile is not None:
+        prov_profile_path = _find_prov_profile(profile)
+        if prov_profile_path is None:
+            # TODO: better error handling
+            print "couldn't find profile"
+            sys.exit(1)
 
     if keychain is not None and keychain_password is not None:
         keychain_cmd = unlock_keychain_cmd(
@@ -104,6 +105,11 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
     if build_dir is not None:
         build_args.extend([
             'SYMROOT=%s' % (os.path.realpath(build_dir))
+        ])
+
+    if profile is not None:
+        build_args.extend([
+            'PROVISIONING_PROFILE=%s' % (provtool.uuid(prov_profile_path))
         ])
 
     build_settings_cmd = ['xcodebuild', '-showBuildSettings'] + build_args
