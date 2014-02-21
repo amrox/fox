@@ -7,6 +7,7 @@ import shutil
 from subprocess import check_call, check_output
 import sys
 from tempfile import mkdtemp
+from string import Template
 
 from .defaults import defaults
 from .helpers import join_cmds, shellify, run_cmd, puts
@@ -65,13 +66,6 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
               keychain_password=None, output=None, overwrite=False,
               build_dir=None, dsym=False, clean=False, **kwargs):
 
-    if profile is not None:
-        prov_profile_path = _find_prov_profile(profile)
-        if prov_profile_path is None:
-            # TODO: better error handling
-            print "couldn't find profile"
-            sys.exit(1)
-
     if keychain is not None and keychain_password is not None:
         keychain_cmd = unlock_keychain_cmd(
             keychain, keychain_password)
@@ -108,6 +102,12 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
         ])
 
     if profile is not None:
+        prov_profile_path = _find_prov_profile(profile)
+        if prov_profile_path is None:
+            # TODO: better error handling
+            print "couldn't find profile"
+            sys.exit(1)
+
         build_args.extend([
             'PROVISIONING_PROFILE=%s' % (provtool.uuid(prov_profile_path))
         ])
@@ -116,6 +116,17 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
     print shellify(build_settings_cmd)
     build_settings_output = check_output(build_settings_cmd)
     build_settings = _parse_build_settings(build_settings_output)
+
+    if profile is None:
+        # Read the profile from the build settings
+        prov_profile_uuid = build_settings['PROVISIONING_PROFILE']
+        if prov_profile_uuid is None or prov_profile_uuid.strip() == '':
+            print "couldn't find profile in build settings"
+            sys.exit(1)
+        else:
+            # TODO: clean this up
+            file_name = '%s.mobileprovision' % (prov_profile_uuid)
+            prov_profile_path = os.path.join(provtool.DEFAULT_PROVPROF_DIR, file_name)
 
     build_cmd = shellify(['xcodebuild'] + build_args)
     if keychain_cmd is not None:
@@ -148,8 +159,8 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
         package_args.extend([
             '--sign', identity,
         ])
-        package_cmd = shellify(package_args)
-        print package_cmd
+    package_cmd = shellify(package_args)
+    print package_cmd
 
     if keychain_cmd is not None:
         package_cmd = join_cmds(keychain_cmd, package_cmd)
@@ -161,19 +172,27 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
     # specify a directory as the output path, and a file in that directory
     # exists, it will fail. We try to preserve that behavior.
 
-    full_ipa_path = full_product_path[:-3] + 'ipa'
-    output_path = os.path.abspath(output)
-    full_output_path = output_path
+    app_name = os.path.splitext(full_product_name)[0]
+    output_template_vars = {
+        'app_name': app_name,
+        'marketing_version': marketing_version,
+        'build_version': build_version,
+        'config': config,
+    }
+    substituted_output = Template(output).substitute(output_template_vars)
+    output_path = os.path.abspath(substituted_output)
 
     if os.path.isdir(output_path):
-        app_name = os.path.splitext(full_product_name)[0]
-        ipa_name = '%s_%s_%s_%s.ipa' % (app_name, marketing_version, build_version, config)
+        ipa_name = Template('${app_name}_${marketing_version}_${build_version}_${config}.ipa').substitute(output_template_vars)
         full_output_path = os.path.join(output_path, ipa_name)
+    else:
+        full_output_path = output_path
 
     if overwrite and os.path.exists(full_output_path):
         os.remove(full_output_path)
 
-    shutil.move(full_ipa_path, full_output_path)
+    src_ipa_path = full_product_path[:-3] + 'ipa'
+    shutil.move(src_ipa_path, full_output_path)
 
     if dsym:
         dsym_name = os.path.basename(full_product_path) + '.dSYM'
