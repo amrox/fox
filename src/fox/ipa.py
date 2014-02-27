@@ -119,7 +119,7 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
 
     if profile is None:
         # Read the profile from the build settings
-        prov_profile_uuid = build_settings['PROVISIONING_PROFILE']
+        prov_profile_uuid = build_settings.get('PROVISIONING_PROFILE')
         if prov_profile_uuid is None or prov_profile_uuid.strip() == '':
             print "couldn't find profile in build settings"
             sys.exit(1)
