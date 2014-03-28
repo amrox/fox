@@ -52,7 +52,7 @@ def _find_prov_profile(input):
 
     # check if it's a valid path first
     if os.path.exists(input):
-        return os.patabspath(input)
+        return os.path.abspath(input)
 
     # assume it's a name of a provisioning profile
     path = provtool.path(input, path=defaults['provisioning_profile_dir'])
