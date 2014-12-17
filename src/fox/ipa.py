@@ -39,10 +39,12 @@ def _determine_target_args(workspace=None, scheme=None, project=None, target=Non
             return ['-workspace', workspace, '-scheme', scheme]
 
     if project is not None:
-        if target is None:
-            raise ValueError("If project is specified target must be also.")
-        else:
+        if target is not None:
             return ['-project', project, '-target', target]
+        elif scheme is not None:
+            return ['-project', project, '-scheme', scheme]
+        else:
+            raise ValueError("If project is specified target or scheme must be also.")
 
     raise NotImplementedError()
 
