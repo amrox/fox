@@ -1,10 +1,9 @@
 from setuptools import setup, find_packages
-import sys, os
+import os
 
 here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README.rst')).read()
 NEWS = open(os.path.join(here, 'NEWS.txt')).read()
-
 
 version = '0.1.6'
 
@@ -17,22 +16,21 @@ install_requires = [
     "biplist==0.6",
 ]
 
-
 setup(name='fox',
     version=version,
-    description="",
+    description="An Xcode build tool and utility knife.",
     long_description=README + '\n\n' + NEWS,
     classifiers=[
       # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
       'Programming Language :: Python :: 2.7',
-    ],
+      ],
     keywords='xcode',
     author='Andy Mroczkowski',
     author_email='andy@mrox.net',
     url='',
     license='BSD',
     packages=find_packages('src'),
-    package_dir = {'': 'src'},include_package_data=True,
+    package_dir={'': 'src'}, include_package_data=True,
     zip_safe=False,
     install_requires=install_requires,
     entry_points={
