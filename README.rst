@@ -1,23 +1,69 @@
-This file requires editing
-==========================
+fox
+===
 
-Note to the author: Please add something informative to this README *before*
-releasing your software, as `a little documentation goes a long way`_.  Both
-README.rst (this file) and NEWS.txt (release notes) will be included in your
-package metadata which gets displayed in the PyPI page for your project.
+fox is a set of tools and utilities for building iOS and Mac projects.
+fox is not a normal project, but rather an outlet for my deep
+frustrations with Apple’s Xcode tools. The vision for fox to provide a
+complete replacement for the Xcode build and project file system (but
+*not* an IDE or text editor.) I realize that achieving this vision is
+probably impossible, but I believe I’ll get something positive out of
+the journey.
 
-You can take a look at the README.txt of other projects, such as repoze.bfg
-(http://bfg.repoze.org/trac/browser/trunk/README.txt) for some ideas.
+**fox is very early and not recommended for production use yet.**
 
-.. _`a little documentation goes a long way`: http://www.martinaspeli.net/articles/a-little-documentation-goes-a-long-way
+Subcommands
+-----------
 
-Credits
--------
+ipa
+~~~
 
-- `Distribute`_
-- `Buildout`_
-- `modern-package-template`_
+Create a signed IPA file.
 
-.. _Buildout: http://www.buildout.org/
-.. _Distribute: http://pypi.python.org/pypi/distribute
-.. _`modern-package-template`: http://pypi.python.org/pypi/modern-package-template
+::
+
+    fox ipa [-h] [--project PROJECT] --target TARGET [--config CONFIG] --identity IDENTITY --profile PROFILE [--keychain KEYCHAIN]
+
+-  ``-h`` Print help.
+-  ``--project`` Path to Xcode profile file.
+-  ``--config`` The build configuration. Defaults to ``Debug``.
+-  ``--target`` Refers to the name of the target in the Xcode project.
+-  ``--identity`` Name of the code-signing identity, i.e. ‘iPhone
+   Distribution: My Company’.
+-  ``--profile`` Provisioning profile. If a valid path is supplied, that
+   profile is used. Also, a name can be provided, (i.e. ‘MyApp Ad Hoc’)
+   and fox with search for that provisioning profile in default
+   locations (currently just
+   ``~/Library/MobileDevice/Provisioning Profiles``).
+-  ``--keychain`` Use a keychain file instead of the default keychain.
+
+resign
+~~~~~~
+
+Resign an existing IPA file.
+
+::
+
+    fox resign [-h] --ipa IPA --identity IDENTITY --profile PROFILE [--keychain KEYCHAIN] --output OUTPUT
+
+-  ``-h`` Print help.
+-  ``--ipa`` Path to IPA file to re-sign.
+-  ``--identity`` Name of the code-signing identity, i.e. ‘iPhone
+   Distribution: My Company’.
+-  ``--profile`` Provisioning profile. If a valid path is supplied, that
+   profile is used. Also, a name can be provided, (i.e. ‘MyApp Ad Hoc’)
+   and fox with search for that provisioning profile in default
+   locations (currently just
+   ``~/Library/MobileDevice/Provisioning Profiles``).
+-  ``--keychain`` Use a keychain file instead of the default keychain.
+-  ``---output`` Path to output re-signed IPA file.
+
+Installation
+============
+
+This should work:
+``(sudo) pip install -I git+https://github.com/amrox/fox.git#egg=fox``
+
+License
+=======
+
+BSD
