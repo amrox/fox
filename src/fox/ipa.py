@@ -181,11 +181,15 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
         'build_version': build_version,
         'config': config,
     }
+
+    if output is None:
+        output = '.'  # default to current directory and ipa format
+
     substituted_output = Template(output).substitute(output_template_vars)
     output_path = os.path.abspath(substituted_output)
 
     if os.path.isdir(output_path):
-        ipa_name = Template('${app_name}_${marketing_version}_${build_version}_${config}.ipa').substitute(output_template_vars)
+        ipa_name = Template(defaults['ipa_output_template']).substitute(output_template_vars)
         full_output_path = os.path.join(output_path, ipa_name)
     else:
         full_output_path = output_path
