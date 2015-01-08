@@ -79,7 +79,10 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
               keychain_password=None, output=None, overwrite=False,
               build_dir=None, dsym=False, clean=False, **kwargs):
 
-    if keychain is not None and keychain_password is not None:
+    if keychain_password is not None:
+        if keychain is None:
+            keychain = os.path.expanduser("~/Library/Keychains/login.keychain")
+
         keychain_cmd = unlock_keychain_cmd(
             keychain, keychain_password)
     else:
