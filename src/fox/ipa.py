@@ -4,6 +4,7 @@ import os
 import provtool
 import re
 import shutil
+import logging
 from subprocess import check_call, check_output
 import sys
 from tempfile import mkdtemp
@@ -12,6 +13,9 @@ from string import Template
 from .defaults import defaults
 from .helpers import join_cmds, shellify, run_cmd, puts
 from .keychain import add_keychain_cmd, unlock_keychain_cmd, find_keychain
+
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_build_settings(output):
@@ -49,7 +53,7 @@ def _determine_target_args(workspace=None, scheme=None, project=None, target=Non
     raise NotImplementedError()
 
 
-def _find_prov_profile(input):
+def _find_prov_profile(input, patternMatch=True):
     """Tries to find a provisioning profile using a few methods, and returns
     it's path if found"""
 
@@ -58,8 +62,15 @@ def _find_prov_profile(input):
         return os.patabspath(input)
 
     # assume it's a name of a provisioning profile
-    path = provtool.path(input, path=defaults['provisioning_profile_dir'])
+    paths = provtool.path(input, path=defaults['provisioning_profile_dir'],
+            patternMatch=patternMatch)
+    if len(paths) == 0:
+        return None
 
+    path = paths[0]
+    if len(paths) > 1:
+        logger.warning('Multiple matches found for "%s", returning first match.'
+                % (input))
     return path
 
 
