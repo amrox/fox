@@ -60,7 +60,10 @@ Resign an existing IPA file.
 Installation
 ============
 
-This should work:
+Latest release from PyPi:
+``pip install fox``
+
+Bleeding edge:
 ``(sudo) pip install -I git+https://github.com/amrox/fox.git#egg=fox``
 
 License
