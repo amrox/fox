@@ -59,7 +59,6 @@ def cmd_install_profile(args):
 
 def cmd_debug(args):
     from .ipa import _find_prov_profile
-    print "test123"
     print _find_prov_profile('i*')
 
 
