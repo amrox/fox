@@ -7,9 +7,6 @@ README = open(os.path.join(here, 'README.rst')).read()
 version = '0.1.10'
 
 install_requires = [
-    # List your project dependencies here.
-    # For more details, see:
-    # http://packages.python.org/distribute/setuptools.html#declaring-dependencies
     "toml==0.8.1",
     "provtool==0.3.0",
     "biplist==0.6",
@@ -26,9 +23,9 @@ setup(name='fox',
     keywords='xcode',
     author='Andy Mroczkowski',
     author_email='andy@mrox.net',
-    url='',
+    url='http://github.com/amrox/fox',
     license='BSD',
-    packages=find_packages('src'),
+    packages=find_packages('src', exclude=['ez_setup', 'examples', 'tests']),
     package_dir={'': 'src'}, include_package_data=True,
     zip_safe=False,
     install_requires=install_requires,
