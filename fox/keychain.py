@@ -3,6 +3,7 @@ import shutil
 from subprocess import check_output
 
 from .helpers import run_cmd, shellify
+from .defaults import defaults
 
 USER_KEYCHAIN_DIR = os.path.expanduser("~/Library/Keychains/")
 
@@ -65,11 +66,18 @@ def install_keychain(keychain_path, add=True):
 
 
 def unlock_keychain_cmd(keychain, password):
+    """Pass `None` as the password to generate a string with the password
+    obfuscated, suitable for logging."""
     keychain_path = find_keychain(keychain)
-    args = ['security', '-v', 'unlock-keychain', '-p', password,
-            keychain_path]
-    return shellify(args)
+    args = ['security', 'unlock-keychain', '-p',
+            password or '********', keychain_path]
+    cmd = shellify(args)
+    return cmd
 
 
 def unlock_keychain(keychain, password):
+    run_cmd(shellify(["security", "-v", "set-keychain-settings", "-lut",
+        str(defaults['keychain_unlock_timeout']), keychain]))
+
+    print(unlock_keychain_cmd(keychain, None))  # print the command without showing the password
     run_cmd(unlock_keychain_cmd(keychain, password))

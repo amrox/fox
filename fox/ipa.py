@@ -11,8 +11,8 @@ from tempfile import mkdtemp
 from string import Template
 
 from .defaults import defaults
-from .helpers import join_cmds, shellify, run_cmd, puts
-from .keychain import add_keychain_cmd, unlock_keychain_cmd, find_keychain
+from .helpers import shellify, run_cmd, puts
+from .keychain import add_keychain_cmd, unlock_keychain, find_keychain
 
 
 logger = logging.getLogger(__name__)
@@ -82,11 +82,7 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
     if keychain_password is not None:
         if keychain is None:
             keychain = os.path.expanduser("~/Library/Keychains/login.keychain")
-
-        keychain_cmd = unlock_keychain_cmd(
-            keychain, keychain_password)
-    else:
-        keychain_cmd = None
+        unlock_keychain(keychain, keychain_password)
 
     config = config or defaults['build_config']
 
@@ -104,7 +100,7 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
             'CODE_SIGN_IDENTITY=%s' % (identity)
         ])
 
-    if keychain_cmd is not None:
+    if keychain is not None:
         run_cmd(add_keychain_cmd(keychain))
 
         build_args.extend([
@@ -145,11 +141,6 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
             prov_profile_path = os.path.join(provtool.DEFAULT_PROVPROF_DIR, file_name)
 
     build_cmd = shellify(['xcodebuild'] + build_args)
-    if keychain_cmd is not None:
-        # unlocking keychain in the same shell to try to prevent
-        # "User Interaction is Not Allowed" errors
-        build_cmd = join_cmds(keychain_cmd, build_cmd)
-
     print build_cmd
     run_cmd(build_cmd)
 
@@ -163,10 +154,6 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
     build_version = info_plist['CFBundleVersion']
     marketing_version = info_plist['CFBundleShortVersionString']
 
-    # unlock the keychain again
-    if keychain_password is not None:
-        run_cmd(keychain_cmd)
-
     package_args = ['xcrun', '-v',
                     '-sdk', 'iphoneos',
                     'PackageApplication', full_product_path,
@@ -177,9 +164,6 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
         ])
     package_cmd = shellify(package_args)
     print package_cmd
-
-    if keychain_cmd is not None:
-        package_cmd = join_cmds(keychain_cmd, package_cmd)
 
     check_call(package_cmd, shell=True)
 
