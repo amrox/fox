@@ -65,10 +65,9 @@ def install_keychain(keychain_path, add=True):
     return dest_path
 
 
-def unlock_keychain_cmd(keychain, password):
+def _unlock_keychain_cmd(keychain_path, password):
     """Pass `None` as the password to generate a string with the password
     obfuscated, suitable for logging."""
-    keychain_path = find_keychain(keychain)
     args = ['security', 'unlock-keychain', '-p',
             password or '********', keychain_path]
     cmd = shellify(args)
@@ -76,8 +75,9 @@ def unlock_keychain_cmd(keychain, password):
 
 
 def unlock_keychain(keychain, password):
+    keychain_path = find_keychain(keychain)
     run_cmd(shellify(["security", "-v", "set-keychain-settings", "-lut",
-        str(defaults['keychain_unlock_timeout']), keychain]))
+        str(defaults['keychain_unlock_timeout']), keychain_path]))
 
-    print(unlock_keychain_cmd(keychain, None))  # print the command without showing the password
-    run_cmd(unlock_keychain_cmd(keychain, password))
+    print(_unlock_keychain_cmd(keychain_path, None))  # print the command without showing the password
+    run_cmd(_unlock_keychain_cmd(keychain_path, password))
