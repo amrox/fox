@@ -199,16 +199,20 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
     shutil.move(src_ipa_path, full_output_path)
 
     if dsym:
-        dsym_name = os.path.basename(full_product_path) + '.dSYM'
+        if build_settings['DWARF_DSYM_FILE_SHOULD_ACCOMPANY_PRODUCT'] == 'NO':
+            logger.warning('dSYM option specified, but dSYM generation \
+is not enabled in Xcode for the "%s" configuration. Skipping.' % (config))
+        else:
+            dsym_name = os.path.basename(full_product_path) + '.dSYM'
 
-        ipa_name = os.path.basename(full_output_path)
-        output_dir = os.path.dirname(full_output_path)
+            ipa_name = os.path.basename(full_output_path)
+            output_dir = os.path.dirname(full_output_path)
 
-        dsym_zip_name = os.path.splitext(ipa_name)[0] + '.dSYM.zip'
-        dsym_zip_path = os.path.join(output_dir, dsym_zip_name)
+            dsym_zip_name = os.path.splitext(ipa_name)[0] + '.dSYM.zip'
+            dsym_zip_path = os.path.join(output_dir, dsym_zip_name)
 
-        run_cmd(shellify(['zip', '-y', '-r', dsym_zip_path, dsym_name]),
-                cwd=built_products_dir)
+            run_cmd(shellify(['zip', '-y', '-r', dsym_zip_path, dsym_name]),
+                    cwd=built_products_dir)
 
 
 def resign_ipa(ipa=None, profile=None, identity=None, keychain=None,
