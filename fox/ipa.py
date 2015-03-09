@@ -116,9 +116,7 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
     if profile is not None:
         prov_profile_path = _find_prov_profile(profile)
         if prov_profile_path is None:
-            # TODO: better error handling
-            print "couldn't find profile"
-            sys.exit(1)
+            raise Exception("Profile matching '%s' not found." % (profile))
 
         build_args.extend([
             'PROVISIONING_PROFILE=%s' % (provtool.uuid(prov_profile_path))
