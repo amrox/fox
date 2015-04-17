@@ -13,6 +13,7 @@ from string import Template
 from .defaults import defaults
 from .helpers import shellify, run_cmd, puts
 from .keychain import add_keychain_cmd, unlock_keychain, find_keychain
+from .util import makedirs
 
 
 logger = logging.getLogger(__name__)
@@ -194,6 +195,7 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
         os.remove(full_output_path)
 
     src_ipa_path = full_product_path[:-3] + 'ipa'
+    makedirs(os.path.dirname(full_output_path))
     shutil.move(src_ipa_path, full_output_path)
 
     if dsym:
