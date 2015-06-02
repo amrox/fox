@@ -132,6 +132,11 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
             'DWARF_DSYM_FILE_SHOULD_ACCOMPANY_PRODUCT=YES'
         ])
 
+    # Just Xcode being Xcode...
+    # http://stackoverflow.com/questions/26516442/how-do-we-manually-fix-resourcerules-plist-cannot-read-resources-error-after
+    build_args.extend([
+        'CODE_SIGN_RESOURCE_RULES_PATH=$(SDKROOT)/ResourceRules.plist'])
+
     build_settings_cmd = ['xcodebuild', '-showBuildSettings'] + build_args
     print shellify(build_settings_cmd)
     build_settings_output = check_output(build_settings_cmd)
@@ -152,7 +157,14 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
     print build_cmd
     run_cmd(build_cmd)
 
-    built_products_dir = build_settings['BUILT_PRODUCTS_DIR']
+    # because BUILT_PRODUCTS_DIR from -showBuildSettings can't be trusted if
+    # SYMROOT isn't specified...
+    if build_dir is not None:
+        built_products_dir = build_settings['BUILT_PRODUCTS_DIR']
+    else:
+        built_products_dir = os.path.join(build_settings['SRCROOT'], 'build',
+            '%s-iphoneos' % (build_settings['CONFIGURATION']))
+
     full_product_name = build_settings['FULL_PRODUCT_NAME']
     full_product_path = os.path.join(built_products_dir, full_product_name)
 
@@ -251,8 +263,8 @@ def resign_ipa(ipa=None, profile=None, identity=None, keychain=None,
 
     codesign_args = ['codesign', '-f',
                      '-s', identity,
-                     '--resource-rules',
-                     os.path.join(app_path, 'ResourceRules.plist'),
+                     #'--resource-rules',
+                     #os.path.join(app_path, 'ResourceRules.plist'),
                      '--entitlements',
                      os.path.join(app_path, 'Entitlements.plist')]
 
