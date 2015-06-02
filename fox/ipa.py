@@ -263,8 +263,8 @@ def resign_ipa(ipa=None, profile=None, identity=None, keychain=None,
 
     codesign_args = ['codesign', '-f',
                      '-s', identity,
-                     #'--resource-rules',
-                     #os.path.join(app_path, 'ResourceRules.plist'),
+                     '--resource-rules',
+                     os.path.join(app_path, 'ResourceRules.plist'),
                      '--entitlements',
                      os.path.join(app_path, 'Entitlements.plist')]
 
