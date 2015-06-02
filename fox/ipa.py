@@ -174,23 +174,16 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
     build_version = info_plist['CFBundleVersion']
     marketing_version = info_plist['CFBundleShortVersionString']
 
-    package_args = ['xcrun', '-v',
-                    '-sdk', 'iphoneos',
-                    'PackageApplication', full_product_path,
-                    '--embed', prov_profile_path]
-    if identity is not None:
-        package_args.extend([
-            '--sign', identity,
-        ])
-    package_cmd = shellify(package_args)
-    print package_cmd
+    tmp_dir = mkdtemp()
+    payload_dir = os.path.join(tmp_dir, 'Payload')
+    makedirs(payload_dir)
 
-    check_call(package_cmd, shell=True)
+    payload_app_path = os.path.join(payload_dir, os.path.basename(full_product_path))
+    shutil.copytree(full_product_path, payload_app_path)
 
-    # shutil.move has some odd behavior. If you specifiy a full absolute path as
-    # the destination, and the path exists, it will overwrite it. If you
-    # specify a directory as the output path, and a file in that directory
-    # exists, it will fail. We try to preserve that behavior.
+    embedded_prov_profile_path = os.path.join(payload_app_path, 'embedded.mobileprovision')
+    src_prov_profile_path = _find_prov_profile(profile)
+    shutil.copyfile(src_prov_profile_path, embedded_prov_profile_path)
 
     app_name = os.path.splitext(full_product_name)[0]
     output_template_vars = {
@@ -215,9 +208,14 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
     if overwrite and os.path.exists(full_output_path):
         os.remove(full_output_path)
 
-    src_ipa_path = full_product_path[:-3] + 'ipa'
     makedirs(os.path.dirname(full_output_path))
-    shutil.move(src_ipa_path, full_output_path)
+
+    # Change working dir so 'Payload' is at the root of the archive.
+    # Might be a way to do this with args to zip but I couldn't find it.
+    pwd = os.getcwd()
+    os.chdir(tmp_dir)
+    check_call(['zip', '-qr', full_output_path, 'Payload'])
+    os.chdir(pwd)
 
     if dsym:
         dsym_name = os.path.basename(full_product_path) + '.dSYM'
