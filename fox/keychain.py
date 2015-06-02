@@ -76,8 +76,10 @@ def _unlock_keychain_cmd(keychain_path, password):
 
 def unlock_keychain(keychain, password):
     keychain_path = find_keychain(keychain)
-    run_cmd(shellify(["security", "-v", "set-keychain-settings", "-lut",
-        str(defaults['keychain_unlock_timeout']), keychain_path]))
 
     print(_unlock_keychain_cmd(keychain_path, None))  # print the command without showing the password
     run_cmd(_unlock_keychain_cmd(keychain_path, password))
+
+    run_cmd(shellify(["security", "-v", "set-keychain-settings", "-lut",
+        str(defaults['keychain_unlock_timeout']), keychain_path]))
+
