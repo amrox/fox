@@ -132,10 +132,10 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
             'DWARF_DSYM_FILE_SHOULD_ACCOMPANY_PRODUCT=YES'
         ])
 
-    # Just Xcode being Xcode...
-    # http://stackoverflow.com/questions/26516442/how-do-we-manually-fix-resourcerules-plist-cannot-read-resources-error-after
-    build_args.extend([
-        'CODE_SIGN_RESOURCE_RULES_PATH=$(SDKROOT)/ResourceRules.plist'])
+    ## Just Xcode being Xcode...
+    ## http://stackoverflow.com/questions/26516442/how-do-we-manually-fix-resourcerules-plist-cannot-read-resources-error-after
+    #build_args.extend([
+    #    'CODE_SIGN_RESOURCE_RULES_PATH=$(SDKROOT)/ResourceRules.plist'])
 
     build_settings_cmd = ['xcodebuild', '-showBuildSettings'] + build_args
     print shellify(build_settings_cmd)
@@ -231,8 +231,18 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
 
 
 def resign_ipa(ipa=None, profile=None, identity=None, keychain=None,
-               output=None, **kwargs):
-    """http://stackoverflow.com/questions/6896029/re-sign-ipa-iphone"""
+        bundle_id=None, entitlements=None, output=None,
+        add_resource_rules=False, **kwargs):
+    """
+    Took work from:
+     
+        http://stackoverflow.com/questions/6896029/re-sign-ipa-iphone
+
+    and:
+
+        https://github.com/talk-to/resign-ipa/blob/master/bin/resign-ipa
+    
+    """
 
     assert ipa
     assert profile
@@ -244,6 +254,9 @@ def resign_ipa(ipa=None, profile=None, identity=None, keychain=None,
         sys.exit(1)
 
     tmp_dir = mkdtemp()
+
+    ## Extract IPA
+
     check_call(['unzip', ipa, '-d', tmp_dir])
 
     payload_path = os.path.join(tmp_dir, 'Payload')
@@ -251,7 +264,11 @@ def resign_ipa(ipa=None, profile=None, identity=None, keychain=None,
         if fnmatch(file, '*.app'):
             app_path = os.path.join(payload_path, file)
 
+    ## Remove Old Code Signature
+
     shutil.rmtree(os.path.join(app_path, '_CodeSignature'))
+
+    ## Install New Provisioning Profile
 
     embedded_prov_profile_path = os.path.join(app_path, 'embedded.mobileprovision')
     os.remove(embedded_prov_profile_path)
@@ -259,12 +276,59 @@ def resign_ipa(ipa=None, profile=None, identity=None, keychain=None,
     src_prov_profile_path = _find_prov_profile(profile)
     shutil.copyfile(src_prov_profile_path, embedded_prov_profile_path)
 
-    codesign_args = ['codesign', '-f',
-                     '-s', identity,
-                     '--resource-rules',
-                     os.path.join(app_path, 'ResourceRules.plist'),
-                     '--entitlements',
-                     os.path.join(app_path, 'Entitlements.plist')]
+    ## Copy and Strip Provisioning Profile of Code Signature Data
+
+    stripped_prov_profile_path = os.path.join(tmp_dir,
+    'embedded.mobileprovision.stripped.plist')
+    
+    if os.path.exists(stripped_prov_profile_path):
+        os.remove(stripped_prov_profile_path)
+
+    check_call(["security", "cms", "-D", "-i",  embedded_prov_profile_path,
+        "-o", stripped_prov_profile_path])
+
+    ## If bundle id is not supplied, extract from Provisioning Profile
+
+    if bundle_id is None:
+        app_id = run_cmd(shellify(["/usr/libexec/PlistBuddy", "-c",
+            "Print:Entitlements:application-identifier",
+            stripped_prov_profile_path])).strip()
+        team_id = run_cmd(shellify(["/usr/libexec/PlistBuddy", "-c",
+            "Print:Entitlements:com.apple.developer.team-identifier",
+            stripped_prov_profile_path])).strip()
+
+        assert app_id.startswith(team_id), "app id doesn't start with team id - this is unexpected"
+
+        bundle_id = app_id[len(team_id):]
+
+    ## Set new bundle id
+
+    check_call(["/usr/libexec/PlistBuddy",
+        "-c", "Set :CFBundleIdentifier %s" % (bundle_id),
+        os.path.join(app_path, "Info.plist")])
+
+    ## If entitlements are not supplied, extract from provisioning profile
+
+    if entitlements is None:
+        entitlements_data = run_cmd(shellify([
+            "/usr/libexec/PlistBuddy", "-x", "-c",
+            "Print :Entitlements", stripped_prov_profile_path]))
+
+        entitlements = os.path.join(tmp_dir, 'Extracted-Entitlements.plist')
+        if os.path.exists(entitlements):
+            os.remove(entitlements)
+
+        with open(entitlements, "w") as f:
+            f.write(entitlements_data)
+
+    ## Build codesign command
+
+    codesign_args = ['codesign', '-f', '-s', identity,
+            '--entitlements', entitlements]
+
+    if add_resource_rules:
+        codesign_args.extend(['--resource-rules',
+            os.path.join(app_path, 'ResourceRules.plist')])
 
     if keychain is not None:
         keychain_path = find_keychain(keychain)
@@ -272,10 +336,14 @@ def resign_ipa(ipa=None, profile=None, identity=None, keychain=None,
 
     codesign_args.extend([app_path])
 
+    ## Re-sign!
+
     codesign_output = check_output(codesign_args)
     puts(codesign_output)
 
     output_path = os.path.abspath(output)
+
+    ## Rezip
 
     # Change working dir so 'Payload' is at the root of the archive.
     # Might be a way to do this with args to zip but I couldn't find it.

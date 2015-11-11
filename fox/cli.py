@@ -98,6 +98,8 @@ def main():
     parser_resign.add_argument('--identity', action='store', required=False)
     parser_resign.add_argument('--profile', action='store', required=False)
     parser_resign.add_argument('--keychain', action='store', required=False)
+    parser_resign.add_argument('--bundle-id', action='store', required=False)
+    parser_resign.add_argument('--entitlements', action='store', required=False)
     parser_resign.add_argument('--output', action='store', required=True)
     parser_resign.set_defaults(func=cmd_resign)
 
