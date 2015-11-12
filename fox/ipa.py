@@ -232,16 +232,16 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
 
 def resign_ipa(ipa=None, profile=None, identity=None, keychain=None,
         bundle_id=None, entitlements=None, output=None,
-        add_resource_rules=False, **kwargs):
+        add_resource_rules=True, **kwargs):
     """
     Took work from:
-     
+
         http://stackoverflow.com/questions/6896029/re-sign-ipa-iphone
 
     and:
 
         https://github.com/talk-to/resign-ipa/blob/master/bin/resign-ipa
-    
+
     """
 
     assert ipa
