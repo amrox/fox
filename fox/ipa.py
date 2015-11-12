@@ -280,7 +280,7 @@ def resign_ipa(ipa=None, profile=None, identity=None, keychain=None,
 
     stripped_prov_profile_path = os.path.join(tmp_dir,
     'embedded.mobileprovision.stripped.plist')
-    
+
     if os.path.exists(stripped_prov_profile_path):
         os.remove(stripped_prov_profile_path)
 
@@ -299,7 +299,7 @@ def resign_ipa(ipa=None, profile=None, identity=None, keychain=None,
 
         assert app_id.startswith(team_id), "app id doesn't start with team id - this is unexpected"
 
-        bundle_id = app_id[len(team_id):]
+        bundle_id = app_id[len(team_id) + 1:]  # +1 for '.' between team_id and bundle_id
 
     ## Set new bundle id
 
