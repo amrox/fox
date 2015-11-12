@@ -232,7 +232,7 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
 
 def resign_ipa(ipa=None, profile=None, identity=None, keychain=None,
         bundle_id=None, entitlements=None, output=None,
-        add_resource_rules=True, **kwargs):
+        add_resource_rules=False, **kwargs):
     """
     Took work from:
 
