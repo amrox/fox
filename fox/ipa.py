@@ -303,9 +303,13 @@ def resign_ipa(ipa=None, profile=None, identity=None, keychain=None,
 
     ## Set new bundle id
 
+    print "setting bundle id %s" % (bundle_id)
+
     check_call(["/usr/libexec/PlistBuddy",
         "-c", "Set :CFBundleIdentifier %s" % (bundle_id),
         os.path.join(app_path, "Info.plist")])
+
+    check_call("cat", os.path.join(app_path, "Info.plist"))
 
     ## If entitlements are not supplied, extract from provisioning profile
 
