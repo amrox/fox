@@ -287,23 +287,28 @@ def resign_ipa(ipa=None, profile=None, identity=None, keychain=None,
     check_call(["security", "cms", "-D", "-i",  embedded_prov_profile_path,
         "-o", stripped_prov_profile_path])
 
-    ## If bundle id is not supplied, extract from Provisioning Profile
+
+    ## Extract the App ID and Team ID for later use
+
+    app_id = run_cmd(shellify(["/usr/libexec/PlistBuddy", "-c",
+        "Print:Entitlements:application-identifier",
+        stripped_prov_profile_path])).strip()
+
+    team_id = run_cmd(shellify(["/usr/libexec/PlistBuddy", "-c",
+        "Print:Entitlements:com.apple.developer.team-identifier",
+        stripped_prov_profile_path])).strip()
+
+
+    ## If bundle id is not supplied, set from extracted
 
     if bundle_id is None:
-        app_id = run_cmd(shellify(["/usr/libexec/PlistBuddy", "-c",
-            "Print:Entitlements:application-identifier",
-            stripped_prov_profile_path])).strip()
-        team_id = run_cmd(shellify(["/usr/libexec/PlistBuddy", "-c",
-            "Print:Entitlements:com.apple.developer.team-identifier",
-            stripped_prov_profile_path])).strip()
 
         assert app_id.startswith(team_id), "app id doesn't start with team id - this is unexpected"
 
         bundle_id = app_id[len(team_id) + 1:]  # +1 for '.' between team_id and bundle_id
 
-    ## Set new bundle id
 
-    print "setting bundle id %s" % (bundle_id)
+    ## Set new bundle id
 
     check_call(["/usr/libexec/PlistBuddy",
         "-c", "Set :CFBundleIdentifier %s" % (bundle_id),
@@ -325,6 +330,13 @@ def resign_ipa(ipa=None, profile=None, identity=None, keychain=None,
         with open(entitlements, "w") as f:
             f.write(entitlements_data)
 
+        ## experimental, set the keychain access group to just the app
+
+        check_call(["/usr/libexec/PlistBuddy",
+            "-c", "Set :keychain-access-groups:0 %s" % (app_id),
+            entitlements])
+
+    
     ## Build codesign command
 
     codesign_args = ['codesign', '-f', '-s', identity,
@@ -340,7 +352,8 @@ def resign_ipa(ipa=None, profile=None, identity=None, keychain=None,
 
     codesign_args.extend([app_path])
 
-    ## Re-sign!
+   
+     ## Re-sign!
 
     codesign_output = check_output(codesign_args)
     puts(codesign_output)
