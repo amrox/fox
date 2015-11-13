@@ -309,7 +309,7 @@ def resign_ipa(ipa=None, profile=None, identity=None, keychain=None,
         "-c", "Set :CFBundleIdentifier %s" % (bundle_id),
         os.path.join(app_path, "Info.plist")])
 
-    check_call("cat", os.path.join(app_path, "Info.plist"))
+    check_call(["cat", os.path.join(app_path, "Info.plist")])
 
     ## If entitlements are not supplied, extract from provisioning profile
 
