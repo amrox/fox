@@ -96,9 +96,9 @@ def list(directory=None):
 
 
 def install_profile(profile_path):
-    uuid = uuid(profile_path)
+    myuuid = uuid(profile_path)
     dst_dir = defaults['provisioning_profile_dir']
-    dst_name = "%s.mobileprovision" % (uuid)
+    dst_name = "%s.mobileprovision" % (myuuid)
     dst_path = os.path.join(dst_dir, dst_name)
     shutil.copyfile(profile_path, dst_path)
     return dst_path
