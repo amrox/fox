@@ -44,6 +44,11 @@ def find_keychain(keychain_name):
 
 
 def add_keychain_cmd(keychain):
+    """
+    Searches for `keychain` using `find_keychain` and returns the command to add
+    it to the keychain search list.
+    """
+    
     keychain_path = find_keychain(keychain)
     keychains = list_keychains()
     keychains.add(keychain_path)
@@ -53,10 +58,19 @@ def add_keychain_cmd(keychain):
 
 
 def add_keychain(keychain):
+    """
+    Searches for `keychain` using `find_keychain` and adds to the to keychain
+    search list.
+    """
     run_cmd(add_keychain_cmd(keychain))
 
 
 def install_keychain(keychain_path, add=True):
+    """
+    Copies a keychain file to the user's keyhcain directiony, and optionally
+    adds it to the search path.
+    """
+    
     keychain_file = os.path.basename(keychain_path)
     dest_path = os.path.join(USER_KEYCHAIN_DIR, keychain_file)
     shutil.copyfile(keychain_path, dest_path)
@@ -66,6 +80,10 @@ def install_keychain(keychain_path, add=True):
 
 
 def unlock_keychain(keychain, password):
+    """
+    Unlocks the specified keychain.
+    """
+
     keychain_path = find_keychain(keychain)
 
     print(_unlock_keychain_cmd(keychain_path, None))  # print the command without showing the password
