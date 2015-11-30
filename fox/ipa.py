@@ -1,7 +1,6 @@
 import biplist
 from fnmatch import fnmatch
 import os
-import provtool
 import re
 import shutil
 import logging
@@ -14,6 +13,7 @@ from .defaults import defaults
 from .helpers import shellify, run_cmd, puts
 from .keychain import add_keychain_cmd, unlock_keychain, find_keychain
 from .util import makedirs
+from . import provisioningprofile
 
 
 logger = logging.getLogger(__name__)
@@ -54,25 +54,6 @@ def _determine_target_args(workspace=None, scheme=None, project=None, target=Non
     raise NotImplementedError()
 
 
-def _find_prov_profile(input, patternMatch=True):
-    """Tries to find a provisioning profile using a few methods, and returns
-    it's path if found"""
-
-    # check if it's a valid path first
-    if os.path.exists(input):
-        return os.path.abspath(input)
-
-    # assume it's a name of a provisioning profile
-    paths = provtool.path(input, path=defaults['provisioning_profile_dir'],
-            patternMatch=patternMatch)
-    if len(paths) == 0:
-        return None
-
-    path = paths[0]
-    if len(paths) > 1:
-        logger.warning('Multiple matches found for "%s", returning first match.'
-                % (input))
-    return path
 
 
 def build_ipa(workspace=None, scheme=None, project=None, target=None,
@@ -115,12 +96,12 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
         ])
 
     if profile is not None:
-        prov_profile_path = _find_prov_profile(profile)
+        prov_profile_path = provisioningprofile.find(profile)
         if prov_profile_path is None:
             raise Exception("Profile matching '%s' not found." % (profile))
 
         build_args.extend([
-            'PROVISIONING_PROFILE=%s' % (provtool.uuid(prov_profile_path))
+            'PROVISIONING_PROFILE=%s' % (provisioningprofile.uuid(prov_profile_path))
         ])
 
     if dsym:
@@ -151,7 +132,7 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
         else:
             # TODO: clean this up
             file_name = '%s.mobileprovision' % (prov_profile_uuid)
-            prov_profile_path = os.path.join(provtool.DEFAULT_PROVPROF_DIR, file_name)
+            prov_profile_path = os.path.join(defaults['provisioning_profile_dir'])
 
     build_cmd = shellify(['xcodebuild'] + build_args)
     print build_cmd
@@ -182,7 +163,7 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
     shutil.copytree(full_product_path, payload_app_path)
 
     embedded_prov_profile_path = os.path.join(payload_app_path, 'embedded.mobileprovision')
-    src_prov_profile_path = _find_prov_profile(profile)
+    src_prov_profile_path = provisioningprofile.find(profile)
     shutil.copyfile(src_prov_profile_path, embedded_prov_profile_path)
 
     app_name = os.path.splitext(full_product_name)[0]
@@ -273,7 +254,7 @@ def resign_ipa(ipa=None, profile=None, identity=None, keychain=None,
     embedded_prov_profile_path = os.path.join(app_path, 'embedded.mobileprovision')
     os.remove(embedded_prov_profile_path)
 
-    src_prov_profile_path = _find_prov_profile(profile)
+    src_prov_profile_path = provisioningprofile.find(profile)
     shutil.copyfile(src_prov_profile_path, embedded_prov_profile_path)
 
     ## Copy and Strip Provisioning Profile of Code Signature Data

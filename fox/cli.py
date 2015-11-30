@@ -1,10 +1,14 @@
 import argparse
+import logging
 import toml
 
 from .defaults import defaults
 from .ipa import build_ipa, resign_ipa
 from .keychain import install_keychain, unlock_keychain
-from .provisioningprofile import install_profile
+from . import provisioningprofile
+
+
+logger = logging.getLogger(__name__)
 
 
 def load_fox_config(fox_config_path):
@@ -54,7 +58,33 @@ def cmd_unlock_keychain(args):
 
 
 def cmd_install_profile(args):
-    print install_profile(args.profile_path)
+    print provisioningprofile.install_profile(args.profile_path)
+
+
+def cmd_list(args):
+    d = defaults['provisioning_profile_dir']
+    print("%s:" % d)
+    try:
+        for l in provisioningprofile.list(directory=d):
+            print(l)
+    except OSError, e:
+        if e.errno == 2:
+            logger.error("Path \'%s\' does not exist." % (d)) 
+        else:
+            raise e
+ 
+
+def cmd_find_profile(args):
+    results = provisioningprofile.find_all(args.name, patternMatch=args.pattern)
+    if results is None:
+        logging.error("No matching profiles found.")
+    else:
+        for p in results:
+            print(p)
+
+
+def cmd_profile_uuid(args):
+    print(provisioningprofile.uuid(args.path))
 
 
 def cmd_debug(args):
@@ -107,6 +137,23 @@ def main():
     parser_install_profile = subparsers.add_parser('install-profile', help='Install a provisioning profile.')
     parser_install_profile.add_argument('profile_path', action='store')
     parser_install_profile.set_defaults(func=cmd_install_profile)
+
+    # list-profiles
+    parser_list_profiles = subparsers.add_parser('list-profiles', help='List installed Provisioning Profiles.')
+    parser_list_profiles.set_defaults(func=cmd_list)
+
+    # find-profiles
+    parser_path = subparsers.add_parser('find-profiles', help='Get the path(s) of Provisioning Profile by name.')
+    parser_path.add_argument('-p', '--pattern', action='store_true',
+            required=False, default=False,
+            help='Treat as a pattern using `fnmatch` style matching.')
+    parser_path.add_argument('name')
+    parser_path.set_defaults(func=cmd_find_profile)
+
+    # profile-uuid
+    parser_uuid = subparsers.add_parser('profile-uuid', help='Display the UDID of a Provisioning Profile by path.')
+    parser_uuid.add_argument('path')
+    parser_uuid.set_defaults(func=cmd_profile_uuid)
 
     # install-keychain
     parser_install_keychain = subparsers.add_parser('install-keychain', help='Install a keychain file.')

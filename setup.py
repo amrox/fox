@@ -8,7 +8,6 @@ version = '0.1.10'
 
 install_requires = [
     "toml==0.8.1",
-    "provtool==0.3.0",
     "biplist==0.6",
 ]
 
