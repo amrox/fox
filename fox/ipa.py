@@ -237,9 +237,13 @@ def extract_info(ipa=None):
         "-c", "Print :CFBundleIdentifier",
         os.path.join(app_path, "Info.plist")]).strip()
 
+    bundle_version = check_output(["/usr/libexec/PlistBuddy",
+        "-c", "Print :CFBundleVersion",
+        os.path.join(app_path, "Info.plist")]).strip()
+
     shutil.rmtree(tmp_dir)
 
-    return { 'bundle_id': bundle_id }
+    return { 'bundle_id': bundle_id, 'bundle_version': bundle_version }
 
    
 
