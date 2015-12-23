@@ -211,6 +211,38 @@ def build_ipa(workspace=None, scheme=None, project=None, target=None,
                 cwd=built_products_dir)
 
 
+def extract_info(ipa=None):
+
+    assert ipa
+
+    if not os.path.exists(ipa):
+        # TODO: better error
+        print "couldn't find ipa"
+        sys.exit(1)
+
+    tmp_dir = mkdtemp()
+
+    ## Extract IPA
+
+    check_call(['unzip', '-qq', ipa, '-d', tmp_dir])
+    
+    payload_path = os.path.join(tmp_dir, 'Payload')
+    for file in os.listdir(payload_path):
+        if fnmatch(file, '*.app'):
+            app_path = os.path.join(payload_path, file)
+
+    # Get Bundle ID from Info.plist
+
+    bundle_id = check_output(["/usr/libexec/PlistBuddy",
+        "-c", "Print :CFBundleIdentifier",
+        os.path.join(app_path, "Info.plist")]).strip()
+
+    shutil.rmtree(tmp_dir)
+
+    return { 'bundle_id': bundle_id }
+
+   
+
 def resign_ipa(ipa=None, profile=None, identity=None, keychain=None,
         bundle_id=None, entitlements=None, output=None,
         add_resource_rules=False, **kwargs):
